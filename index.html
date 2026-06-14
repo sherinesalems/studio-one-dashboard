@@ -727,7 +727,7 @@ function rClients(){
   list=DB.clients.filter(function(c){if(f==='all')return true;if(f==='fixed')return c.ct==='fixed';return c.st===f;});
   var html='<div style="display:flex;flex:1;overflow:hidden;height:100%">';
   html+='<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">';
-  html+='<div class="topbar"><div class="tb-t">Clientes</div><button class="btn btn-pink btn-sm" onclick="openClientModal()">+ Nuevo</button></div>';
+  html+='<div class="topbar"><div class="tb-t">Clientes</div><button class="btn btn-dark btn-sm" onclick="openClientModal()">+ Nuevo cliente</button></div>';
   html+='<div style="background:#fff;border-bottom:1px solid var(--border);padding:7px 14px;display:flex;gap:4px;flex-wrap:wrap">';
   for(var i=0;i<tabs.length;i++)html+='<button class="btn '+(f===tabs[i][0]?'btn-dark':'btn-light')+' btn-xs" onclick="DB.clientFilter=\''+tabs[i][0]+'\';render()">'+tabs[i][1]+'</button>';
   html+='</div><div class="content">';
@@ -1872,24 +1872,7 @@ function closeSocialComposer(){
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
   html+=fsel('Plataforma','np-pl',[['instagram','Instagram'],['facebook','Facebook'],['linkedin','LinkedIn'],['twitter','Twitter / X']]);
   html+=fsel('Formato','np-fmt',[['static','Static post'],['reel','Reel / Video'],['carousel','Carousel'],['story','Story']]);
-  html+='</div>';
-  html+='<div style="margin-bottom:10px"><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Caption</label>';
-  html+='<textarea id="np-cap" rows="5" oninput="updateSocialPreview()" onchange="updateSocialPreview()" placeholder="Escribe tu caption aqui..." style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--sans);font-size:11.5px;outline:none;color:var(--text);resize:vertical"></textarea></div>';
-  html+='<div style="margin-bottom:10px"><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Imagen / Media (URL opcional)</label>';
-  html+='<input id="np-img" oninput="updateSocialPreview()" placeholder="https://... o deja vacio para placeholder" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--sans);font-size:11px;outline:none;color:var(--text)"/></div>';
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
-  html+='<div><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Fecha</label>';
-  html+='<input type="date" id="np-date" value="'+dateVal+'" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:11px;outline:none;color:var(--text)"/></div>';
-  html+='<div><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Hora</label>';
-  html+='<input type="time" id="np-time" value="09:00" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:11px;outline:none;color:var(--text)"/></div>';
-  html+='</div>';
-  html+=fsel('Estado','np-st',[['scheduled','Programado'],['draft','Borrador']]);
-  html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:14px;font-size:9.5px;color:var(--text3);line-height:1.6">';
-  html+='💡 Para publicar directamente conecta tus cuentas en <a href="https://app.hubspot.com/social" target="_blank" style="color:var(--sky)">HubSpot</a> o <a href="https://buffer.com" target="_blank" style="color:var(--sky)">Buffer</a>.';
-  html+='</div>';
-  html+='<div style="display:flex;gap:8px"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveNewPost()">Guardar post</button></div>';
-  html+='</div>';
-  // Right panel — live preview
+
 function updateSocialPreview(){
   var pl=(document.getElementById('np-pl')||{}).value||'instagram';
   var cap=(document.getElementById('np-cap')||{}).value||'';
@@ -2170,7 +2153,7 @@ function openClientModal(){
   for(var i=0;i<INDIVIDUAL_SERVICES.length;i++){
     var sv=INDIVIDUAL_SERVICES[i];
     var odd=i%2===0;
-    svcChecks+='<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;background:'+(odd?'var(--bg2)':'#fff')+';border-bottom:1px solid var(--border);transition:background .1s" onmouseover="this.style.background=\'var(--amber-bg)\'" onmouseout="this.style.background=\''+(odd?'var(--bg2)':'#fff')+'\'">';
+    svcChecks+='<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;background:'+(odd?'var(--bg2)':'#fff')+';border-bottom:1px solid var(--border);transition:background .1s" onmouseover="this.style.background=\'var(--indigo-bg)\'" onmouseout="this.style.background=\''+(odd?'var(--bg2)':'#fff')+'\'">';
     svcChecks+='<input type="checkbox" id="svc-'+sv.id+'" value="'+sv.id+'" onchange="updateSvcTotal()" style="width:13px;height:13px;accent-color:var(--text2);flex-shrink:0"/>';
     svcChecks+='<span style="flex:1;font-size:11px">'+sv.name+'</span>';
     svcChecks+='<span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap">$'+sv.price.toLocaleString()+'</span>';
@@ -2320,8 +2303,67 @@ function openStudioTaskModal(){
 }
 function saveStudioTask(){DB.studio.tasks.unshift({id:Date.now(),ttl:document.getElementById('st-ti').value||'Nueva tarea',cat:document.getElementById('st-cat').value,due:document.getElementById('st-du').value||'2026-06-20',pr:document.getElementById('st-pr').value,st:'pending'});closeM();buildNav();render();}
 
-function openPotentialModal(){showModal('<h3>Nuevo prospecto</h3>'+fg('Empresa','pt-co','Ej. Startup XYZ','')+fg('Nombre','pt-nm','Ej. Juan Perez','')+fg('Servicio','pt-sv','Ej. Branding','')+fg('Presupuesto ($)','pt-bg','2500','number')+fsel('Estado','pt-st',[['quote_sent','Quote enviado'],['negotiating','Negociando'],['waiting_deposit','Esperando 50%']])+fta('Notas','pt-nt','Como llego, que necesita...')+'<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="savePotential()">Agregar</button></div>');}
-function savePotential(){var co=document.getElementById('pt-co').value||'Nuevo Prospecto';var col=PAL[DB.potentials.length%PAL.length];DB.potentials.push({id:Date.now(),nm:document.getElementById('pt-nm').value||'',co:co,stage:document.getElementById('pt-st').value,color:col,in:co.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase(),svc:document.getElementById('pt-sv').value||'Branding',budget:parseInt(document.getElementById('pt-bg').value)||0,notes:document.getElementById('pt-nt').value||'',date:'Jun 2026'});closeM();buildNav();render();}
+function openPotentialModal(){
+  var pkgOpts=PKGS.map(function(p){return'<option value="pkg_'+p.id+'">'+p.name+' \u2014 $'+p.price.toLocaleString()+' ('+p.timeline+')</option>';}).join('');
+  var svcOpts=INDIVIDUAL_SERVICES.map(function(s){return'<option value="svc_'+s.id+'">'+s.name+' \u2014 $'+s.price+'</option>';}).join('');
+  showModal(
+    '<h3>Nuevo prospecto</h3>'+
+    fg('Empresa','pt-co','Ej. Startup XYZ','')+
+    fg('Nombre de contacto','pt-nm','Ej. Juan Perez','')+
+    '<div class="fg"><label class="fl">Paquete o servicio de interes</label>'+
+    '<select class="fs" id="pt-pkg" onchange="updatePotentialDetails()" style="margin-bottom:6px">'+
+    '<option value="">-- Seleccionar --</option>'+
+    '<optgroup label="PAQUETES">'+pkgOpts+'</optgroup>'+
+    '<optgroup label="SERVICIOS INDIVIDUALES">'+svcOpts+'</optgroup>'+
+    '</select>'+
+    '<div id="pt-pkg-detail" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:10.5px;color:var(--text2);display:none;line-height:1.6;margin-top:4px"></div>'+
+    '</div>'+
+    fg('Presupuesto estimado ($)','pt-bg','','number')+
+    fsel('Estado','pt-st',[['quote_sent','Quote enviado'],['negotiating','Negociando'],['waiting_deposit','Esperando 50%']])+
+    fta('Notas','pt-nt','Como llego, que necesita...')+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="savePotential()">Agregar</button></div>'
+  );
+}
+function updatePotentialDetails(){
+  var sel=document.getElementById('pt-pkg');
+  var detail=document.getElementById('pt-pkg-detail');
+  var bgEl=document.getElementById('pt-bg');
+  if(!sel||!detail)return;
+  var val=sel.value;
+  if(!val){detail.style.display='none';return;}
+  detail.style.display='block';
+  if(val.indexOf('pkg_')===0){
+    var pk=PKGS.find(function(p){return p.id===val.replace('pkg_','');});
+    if(pk){
+      var bullets=pk.steps.map(function(s){return '<span style="display:inline-block;background:'+pk.bg+';color:'+pk.color+';border:1px solid '+pk.bd+';border-radius:4px;padding:1px 7px;font-size:9px;margin:2px">'+s.label+'</span>';}).join('');
+      detail.innerHTML='<div style="font-weight:600;color:var(--text);margin-bottom:5px">'+pk.name+' &mdash; $'+pk.price.toLocaleString()+' &middot; '+pk.timeline+'<br><span style="font-size:9px;font-weight:400;color:var(--text3)">'+pk.desc+'</span></div>'+bullets;
+      if(bgEl)bgEl.value=pk.price;
+    }
+  } else if(val.indexOf('svc_')===0){
+    var sv=INDIVIDUAL_SERVICES.find(function(s){return s.id===val.replace('svc_','');});
+    if(sv){
+      detail.innerHTML='<div style="font-weight:600;color:var(--text);margin-bottom:3px">'+sv.name+' &mdash; $'+sv.price+'</div><div style="color:var(--text3);font-size:9.5px">'+sv.detail+'</div>';
+      if(bgEl)bgEl.value=sv.price;
+    }
+  }
+}
+function savePotential(){
+  var co=document.getElementById('pt-co').value||'Nuevo Prospecto';
+  var col=PAL[DB.potentials.length%PAL.length];
+  var pkgVal=(document.getElementById('pt-pkg')||{}).value||'';
+  var svcLabel='';
+  if(pkgVal.indexOf('pkg_')===0){var pk=PKGS.find(function(p){return p.id===pkgVal.replace('pkg_','');});svcLabel=pk?pk.name:'';}
+  else if(pkgVal.indexOf('svc_')===0){var sv=INDIVIDUAL_SERVICES.find(function(s){return s.id===pkgVal.replace('svc_','');});svcLabel=sv?sv.name:'';}
+  DB.potentials.push({
+    id:Date.now(),nm:document.getElementById('pt-nm').value||'',co:co,
+    stage:document.getElementById('pt-st').value,color:col,
+    in:co.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase(),
+    svc:svcLabel||'Branding',pkgRef:pkgVal,
+    budget:parseInt(document.getElementById('pt-bg').value)||0,
+    notes:document.getElementById('pt-nt').value||'',date:'Jun 2026'
+  });
+  closeM();buildNav();render();
+}
 
 function openPostModal(){var opts=DB.clients.map(function(c){return'<option>'+c.co+'</option>';}).join('');opts='<option>Studio One</option>'+opts;showModal('<h3>Nuevo post</h3><div class="fg"><label class="fl">Cliente / Estudio</label><select class="fs" id="p-cl">'+opts+'</select></div>'+fsel('Plataforma','p-pl',[['instagram','Instagram'],['facebook','Facebook'],['twitter','Twitter/X'],['linkedin','LinkedIn'],['tiktok','TikTok']])+fsel('Formato','p-fm',[['static','Post estatico'],['carousel','Carrusel'],['reel','Reel'],['video','Video'],['story','Story']])+fta('Caption','p-cp','Escribe el caption aqui...')+fg('Fecha','p-dt','','date')+fg('Hora','p-hr','','time')+fsel('Estado','p-st',[['scheduled','Programado'],['draft','Borrador']])+'<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="savePost()">Guardar</button></div>');}
 function savePost(){DB.posts.unshift({id:Date.now(),cl:document.getElementById('p-cl').value,pl:document.getElementById('p-pl').value,fmt:document.getElementById('p-fm').value,cap:document.getElementById('p-cp').value||'Sin caption',date:document.getElementById('p-dt').value||'2026-06-15',time:document.getElementById('p-hr').value||'12:00',st:document.getElementById('p-st').value});closeM();buildNav();render();}
