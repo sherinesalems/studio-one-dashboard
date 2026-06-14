@@ -405,55 +405,145 @@ function getCustomSteps(c){
   });
 }
 
+function addBusinessDays(startDate, n){
+  var d=new Date(startDate);var count=0;
+  while(count<n){d.setDate(d.getDate()+1);var day=d.getDay();if(day!==0&&day!==6)count++;}
+  return d;
+}
+function toDateStr(d){var mo=d.getMonth()+1;var dy=d.getDate();return d.getFullYear()+'-'+(mo<10?'0':'')+mo+'-'+(dy<10?'0':'')+dy;}
+function isMeetingConflict(dateStr,time){
+  return DB.meetings.some(function(m){return m.date===dateStr&&m.time===time;});
+}
+function findFreeTime(dateStr){
+  var slots=['09:00','10:00','11:00','14:00','15:00','16:00'];
+  for(var i=0;i<slots.length;i++){if(!isMeetingConflict(dateStr,slots[i]))return slots[i];}
+  return'10:00'; // fallback
+}
 function addAutoMeetings(c){
   if(!c.start)return;
   var startD=new Date(c.start+'T12:00');
-  var endD=c.end?new Date(c.end+'T12:00'):null;
-  function addDays(d,n){var r=new Date(d);r.setDate(r.getDate()+n);return r;}
-  function toStr(d){var mo=d.getMonth()+1;var dy=d.getDate();return d.getFullYear()+'-'+(mo<10?'0':'')+mo+'-'+(dy<10?'0':'')+dy;}
-  // Scale dayOffset from package's totalDays to actual project duration
-  function scaledOffset(offset,pkg,actualDays){
-    if(!endD||!pkg)return offset;
-    return Math.round(offset*(actualDays/pkg.totalDays));
-  }
   var zoomLink='https://zoom.us/j/studioone';
   var meetLink='https://meet.google.com/studio-one';
-  if(c.pkg==='custom'){
-    var steps=getCustomSteps(c);
-    var totalD=steps.reduce(function(a,s){return a+s.days;},0)||7;
-    var actualD=endD?Math.ceil((endD-startD)/864e5):totalD;
-    var meets=[
-      {offset:0,   title:'Kick-off — '+c.co,  desc:'Brief y alineacion inicial. Presenta el cuestionario de marca.',type:'google'},
-      {offset:Math.round(actualD/2), title:'Review — '+c.co, desc:'Revision de avance y ajustes. 1 ronda de revision incluida.',type:'zoom'},
-      {offset:actualD-1, title:'Entrega — '+c.co, desc:'Aprobacion final y entrega de archivos.',type:'google'}
-    ];
-    meets.forEach(function(m){
-      var link=m.type==='zoom'?zoomLink:meetLink;
-      DB.meetings.push({id:Date.now()+Math.random(),ttl:m.title,cl:c.co,date:toStr(addDays(startD,m.offset)),time:'10:00',type:m.type,dur:'45 min',link:link,auto:true,desc:m.desc});
+
+  // Build invite email body for a meeting
+  function buildInviteBody(title,date,time,type,desc,clientName,clientEmail){
+    var link=type==='zoom'?zoomLink:meetLink;
+    var platform=type==='zoom'?'Zoom':'Google Meet';
+    return 'mailto:'+clientEmail+'?subject='+encodeURIComponent('[Studio One] '+title)
+      +'&body='+encodeURIComponent(
+        'Hola '+clientName+',\n\n'
+        +'Te confirmo nuestra reunion:\n\n'
+        +'Fecha: '+date+'\nHora: '+time+'\nPlataforma: '+platform+'\nLink: '+link+'\n\n'
+        +desc+'\n\n'
+        +'Cualquier pregunta no dudes en escribirme.\n\n'
+        +'Saludos,\nSherine Salem\nStudio One\n'
+      );
+  }
+
+  function pushMeeting(title,bDaysFromStart,type,dur,desc,isKickoff){
+    var d=addBusinessDays(startD,bDaysFromStart);
+    var dateStr=toDateStr(d);
+    var time=isKickoff?'09:00':findFreeTime(dateStr);
+    var link=type==='zoom'?zoomLink:meetLink;
+    var inviteUrl=c.email?buildInviteBody(title,dateStr,time,type,desc,c.nm||c.co,c.email):'';
+    DB.meetings.push({
+      id:Date.now()+Math.random(),
+      ttl:title+' — '+c.co,
+      cl:c.co,date:dateStr,time:time,
+      type:type,dur:dur,link:link,
+      auto:true,desc:desc,
+      inviteUrl:inviteUrl,
+      clientEmail:c.email||''
     });
-  } else {
-    var pkg=PKGS.find(function(p){return p.id===c.pkg;});
-    if(!pkg||!pkg.meetingSchedule)return;
-    var actualD=endD?Math.ceil((endD-startD)/864e5):pkg.totalDays;
-    pkg.meetingSchedule.forEach(function(m,idx){
-      var scaled=scaledOffset(m.dayOffset,pkg,actualD);
-      var link=m.type==='zoom'?zoomLink:meetLink;
-      var dur=idx===0?'60 min':(idx===pkg.meetingSchedule.length-1?'90 min':'60 min');
-      DB.meetings.push({
-        id:Date.now()+Math.random(),
-        ttl:m.title+' — '+c.co,
-        cl:c.co,
-        date:toStr(addDays(startD,Math.max(0,scaled-1))),
-        time:idx===0?'09:00':'10:00',
-        type:m.type,
-        dur:dur,
-        link:link,
-        auto:true,
-        desc:m.desc
-      });
+    // Also add as a task reminder
+    DB.tasks.push({
+      id:Date.now()+Math.random(),
+      ttl:'Preparar: '+title,
+      cl:c.co,due:dateStr,
+      pr:'medium',st:'pending'
     });
   }
+
+  if(c.pkg==='starter'){
+    // Starter: 1-2 weeks / 10 biz days
+    // Meeting 1: Day 1 — Kick-off (Google Meet, 60min)
+    pushMeeting('Kick-off — Brief y Brand Story',0,'google','60 min',
+      'Presentacion inicial, cuestionario de marca, moodboard y referencias visuales. Objetivo: alinear direccion creativa.',true);
+    // Meeting 2: Day 4 — Logo Explorations review (Zoom, 45min)
+    pushMeeting('Review Estudios de Logo',3,'zoom','45 min',
+      'Presentacion de 4 exploraciones de logo. El cliente dara feedback consolidado en maximo 48 horas.',false);
+    // Meeting 3: Day 9 — Entrega final (Google Meet, 60min)
+    pushMeeting('Entrega Final — Aprobacion',8,'google','60 min',
+      'Revision de todos los entregables finales, aprobacion y handoff de archivos AI, PDF, PNG, SVG.',false);
+
+  } else if(c.pkg==='brand'){
+    // Brand Identity: 3-5 weeks / 25 biz days
+    pushMeeting('Kick-off — Brand Strategy',0,'google','60 min',
+      'Brand story, mission & vision, moodboard y creative direction. Compartir cuestionario de marca.',true);
+    pushMeeting('Review Estudios — Semana 1',6,'zoom','60 min',
+      'Presentacion de 5 exploraciones de logo. Feedback consolidado en 48 horas.',false);
+    pushMeeting('Review Logo + Color + Tipografia',11,'zoom','60 min',
+      'Aprobacion del logo system, paleta de colores primaria/secundaria y sistema tipografico.',false);
+    pushMeeting('Review Stationery + Social Kit',16,'zoom','60 min',
+      'Revision de papeleria completa (6 piezas) y social media kit. 1 ronda de revision incluida.',false);
+    pushMeeting('Review Brand Applications',21,'zoom','45 min',
+      'Mockups de merch (4 aplicaciones), lifestyle mockups y 2 videos animados.',false);
+    pushMeeting('Entrega Final + Brand Guidelines',23,'google','90 min',
+      'Aprobacion final, firma, entrega de Brand Guidelines (~30-35 pgs) y handoff completo de archivos.',false);
+
+  } else if(c.pkg==='full'){
+    // Brand System: 5-8 weeks / 42 biz days
+    pushMeeting('Kick-off — Brief Integral',0,'google','60 min',
+      'Brand strategy completa, moodboard, creative direction y cuestionario de packaging.',true);
+    pushMeeting('Review Estudios — Semana 1',6,'zoom','60 min',
+      'Presentacion de 10 exploraciones de logo. Feedback en 48 horas.',false);
+    pushMeeting('Review Logo + Color + Tipografia',13,'zoom','60 min',
+      'Aprobacion de logo system, colores, tipografia y brand elements (3 custom).',false);
+    pushMeeting('Review Stationery + Packaging',20,'zoom','60 min',
+      'Revision de papeleria (3 rondas) y packaging design (hasta 4 SKUs, 2 rondas).',false);
+    pushMeeting('Review Social Kit + Campaign',27,'zoom','60 min',
+      '15 post templates, 8 stories, social direction y campaign/advertising assets.',false);
+    pushMeeting('Review Applications + Mockups',34,'zoom','60 min',
+      '6 aplicaciones de merch, 15-20 lifestyle mockups y 3 videos animados.',false);
+    pushMeeting('Review Brand Guidelines',39,'zoom','60 min',
+      'Manual de marca ~40-45 paginas. Revision antes de entrega final.',false);
+    pushMeeting('Entrega Final + Capacitacion',41,'google','90 min',
+      'Handoff completo de todos los archivos, capacitacion en uso de la marca y cierre del proyecto.',false);
+
+  } else if(c.pkg==='custom'){
+    // Individual services — Day 3 kick-off, then based on revisions
+    var steps=getCustomSteps(c);
+    var totalRevisions=0;
+    var selSvcs=(c.selectedSvcs||[]).map(function(sid){
+      return INDIVIDUAL_SERVICES.find(function(s){return s.id===sid;});
+    }).filter(Boolean);
+
+    // Calculate total days and revisions
+    var totalDays=steps.reduce(function(a,s){return a+s.days;},0)||7;
+    selSvcs.forEach(function(sv){
+      // Each service gets 1-2 revision meetings based on type
+      var revs=sv.id==='sv13'||sv.id==='sv14'?2:sv.id==='sv01'||sv.id==='sv05'?2:1;
+      totalRevisions+=revs;
+    });
+
+    // Kick-off Day 3
+    pushMeeting('Kick-off — '+c.co,2,'google','60 min',
+      'Alineacion inicial, brief detallado y presentacion del scope contratado: '+selSvcs.map(function(s){return s.name;}).join(', ')+'.',true);
+
+    // Space revision meetings evenly
+    var revSpacing=Math.max(3,Math.floor(totalDays/(totalRevisions+1)));
+    for(var ri=0;ri<totalRevisions;ri++){
+      var offset=3+(ri+1)*revSpacing;
+      pushMeeting('Revision '+(ri+1)+' — '+c.co,offset,'zoom','45 min',
+        'Revision de avance y feedback consolidado. Ronda '+(ri+1)+' de '+totalRevisions+'.',false);
+    }
+
+    // Final delivery
+    pushMeeting('Entrega Final — '+c.co,totalDays-1,'google','60 min',
+      'Aprobacion final y entrega de todos los archivos.',false);
+  }
 }
+
 function getStepDates(c){
   var steps;
   if(c.pkg==='custom'){steps=getCustomSteps(c);}
@@ -747,6 +837,8 @@ function rClients(){
     html+='<div style="display:flex;align-items:center;gap:4px">'+icn(c.dep?'pay_ok':'pay_pending',14)+'<span style="font-family:var(--mono);font-size:11px">$'+c.budget.toLocaleString()+'</span></div>';
     html+='<span class="pill '+(c.st==='active'?'p-lime':c.st==='pending'?'p-amber':'p-neutral')+'">'+(c.st==='active'?'Activo':c.st==='pending'?'En proceso':'Pausado')+'</span>';
     if(!c.dep)html+='<button class="btn btn-lime btn-xs" onclick="event.stopPropagation();markDep('+c.id+')">50% recibido</button>';
+    html+='<button class="btn btn-light btn-xs" onclick="event.stopPropagation();openEditClientModal('+c.id+')" title="Editar cliente">&#9998; Editar</button>';
+    html+='<button class="btn btn-light btn-xs" onclick="event.stopPropagation();openEditClientModal('+c.id+')" title="Editar">&#9998; Editar</button>';
     html+='<button class="btn btn-rose btn-xs" onclick="event.stopPropagation();delClient('+c.id+')" title="Eliminar cliente">&#128465; Eliminar</button>';
     html+='</div></div>';
   }
@@ -1350,10 +1442,16 @@ function rTimeline(){
     var barColorLight=isCustom?'var(--amber-bg)':cc(c,1);
 
     // Main timeline row
+    var pendingS=totalS-doneS;
     html+='<div class="tl-row" style="margin-bottom:0;border-bottom:none;border-radius:'+(isExpanded?'8px 8px 0 0':'8px')+';cursor:default">';
     html+='<div class="tl-label"><div class="cav" style="background:'+cc(c,1)+';color:'+cc(c,0)+';border:1px solid '+cc(c,2)+';width:22px;height:22px;font-size:9px;border-radius:6px;flex-shrink:0">'+c.in+'</div>';
     html+='<div style="min-width:0"><div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.co+'</div>';
-    html+='<div style="font-size:8.5px;color:var(--text3)">'+fmtShort(sD)+'–'+fmtShort(eD)+(behind2?' ⚠️':'')+(isCustom?' · Servicios':'')+'</div></div>';
+    html+='<div style="font-size:8.5px;color:var(--text3)">'+fmtShort(sD)+'–'+fmtShort(eD)+(behind2?' ⚠️':'')+'</div>';
+    html+='<div style="display:flex;gap:3px;margin-top:2px;flex-wrap:wrap">';
+    html+='<span style="font-size:7.5px;background:'+cc(c,1)+';color:'+cc(c,0)+';border:1px solid '+cc(c,2)+';border-radius:3px;padding:1px 4px;font-weight:600">'+doneS+'/'+totalS+' pasos</span>';
+    if(pendingS>0)html+='<span style="font-size:7.5px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:3px;padding:1px 4px">'+pendingS+' pendiente'+(pendingS!==1?'s':'')+'</span>';
+    if(behind2)html+='<span style="font-size:7.5px;background:var(--rose-bg);color:var(--rose);border:1px solid var(--rose-bd);border-radius:3px;padding:1px 4px">Demorado</span>';
+    html+='</div></div>';
     html+='</div>';
     html+='<div class="tl-bar-wrap" style="position:relative">';
     if(stepsForTl.length){
@@ -1536,6 +1634,7 @@ function rSchedule(){
     html+=meetIcon(mt.type);
     if(mt.link)html+='<a href="'+mt.link+'" target="_blank" class="btn btn-light btn-xs">Unirse — '+(mt.type==='zoom'?'Zoom':'Meet')+'</a>';
     else html+='<button class="btn btn-light btn-xs">Unirse</button>';
+    if(mt.inviteUrl&&mt.clientEmail)html+='<a href="'+mt.inviteUrl+'" class="btn btn-light btn-xs" title="Abrir borrador de email para '+mt.clientEmail+'">📧 Enviar invite</a>';
     html+='<button class="btn btn-light btn-xs" onclick="editMeet('+mt.id+')">✏️ Editar</button>';
     html+='<button class="btn btn-rose btn-xs" onclick="delMeet('+mt.id+')">&#10005;</button>';
     html+='</div>';
