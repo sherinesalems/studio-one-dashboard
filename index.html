@@ -688,7 +688,11 @@ function savePostEdit(id){
 // ── CLIENTS ──
 function rClients(){
   var s=DB.selClient,f=DB.clientFilter||'all';
-  var tabs=[['all','Todos'],['active','Activos'],['fixed','Fijos'],['potential','Potenciales']];
+  var allC=DB.clients.length;
+  var actC=DB.clients.filter(function(c){return c.st==='active';}).length;
+  var fixC=DB.clients.filter(function(c){return c.ct==='fixed';}).length;
+  var potC=DB.potentials.length;
+  var tabs=[['all','Todos'+(allC?' ('+allC+')':'')],['active','Activos'+(actC?' ('+actC+')':'')],['fixed','Fijos'+(fixC?' ('+fixC+')':'')],['potential','Potenciales'+(potC?' ('+potC+')':'')]];
   var list;
   if(f==='potential'){
     // Show potentials inline
@@ -775,7 +779,7 @@ function rDetail(c){
   var html='<div style="width:268px;min-width:268px;background:#fff;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">';
   html+='<div style="padding:13px 14px;border-bottom:1px solid var(--border)">';
   html+='<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px"><div class="cav" style="background:'+cc(c,1)+';color:'+cc(c,0)+';border:1px solid '+cc(c,2)+';width:36px;height:36px;border-radius:9px;font-size:12px">'+c.in+'</div><div style="flex:1"><div style="font-weight:500;font-size:13px">'+c.co+'</div><div style="font-size:10.5px;color:var(--text3)">'+c.nm+'</div></div><span class="pill '+(c.st==='active'?'p-lime':c.st==='pending'?'p-amber':'p-neutral')+'">'+(c.st==='active'?'Activo':c.st==='pending'?'En proceso':'Pausado')+'</span></div>';
-  html+='<div style="display:flex;gap:5px"><button class="btn btn-light btn-xs" onclick="openMeetModal(\''+c.co+'\')">Reunion</button><button class="btn btn-light btn-xs" onclick="openUpdateModal('+c.id+')">+ Update</button><button class="btn btn-rose btn-xs" onclick="delClient('+c.id+')">Eliminar</button></div>';
+  html+='<div style="display:flex;gap:5px"><button class="btn btn-light btn-xs" onclick="openMeetModal(\''+c.co+'\')">Reunion</button><button class="btn btn-light btn-xs" onclick="openUpdateModal('+c.id+')">+ Update</button><button class="btn btn-light btn-xs" onclick="openEditClientModal('+c.id+')">✏️ Editar</button><button class="btn btn-rose btn-xs" onclick="delClient('+c.id+')">Eliminar</button></div>';
   html+='</div>';
   html+='<div style="flex:1;overflow-y:auto;padding:13px 14px">';
 
@@ -1098,7 +1102,8 @@ function rPackages(){
   html+='<div style="color:#fff;font-size:15px;font-weight:600;margin-bottom:2px">Paquetes y Servicios</div>';
   html+='<div style="color:rgba(255,255,255,.5);font-size:10px;margin-bottom:14px">Scope exacto, deliverables, precios y condiciones del contrato</div>';
   html+='<div style="display:flex;gap:2px">';
-  html+='<button onclick="DB.pkgTab=\'packages\';render()" style="background:'+(tab==='packages'?'#fff':'transparent')+';color:'+(tab==='packages'?'#1a1d2e':'rgba(255,255,255,.65)')+';border:none;padding:8px 20px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0">Paquetes y Servicios</button>';
+  html+='<button onclick="DB.pkgTab=\'packages\';render()" style="background:'+(tab==='packages'?'#fff':'transparent')+';color:'+(tab==='packages'?'#1a1d2e':'rgba(255,255,255,.65)')+';border:none;padding:8px 20px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0">Paquetes</button>';
+  html+='<button onclick="DB.pkgTab=\'services\';render()" style="background:'+(tab==='services'?'#fff':'transparent')+';color:'+(tab==='services'?'#1a1d2e':'rgba(255,255,255,.65)')+';border:none;padding:8px 20px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0">Servicios Individuales</button>';
   html+='<button onclick="DB.pkgTab=\'terms\';render()" style="background:'+(tab==='terms'?'#fff':'transparent')+';color:'+(tab==='terms'?'#1a1d2e':'rgba(255,255,255,.65)')+';border:none;padding:8px 20px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0">Terminos y Condiciones</button>';
   html+='</div></div>';
 
@@ -1258,27 +1263,34 @@ function rPackages(){
   }
   html+='</div>';
 
-  // Individual Services table
-  html+='<div style="margin-bottom:20px">';
-  html+='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Servicios Individuales</div>';
-  html+='<div style="font-size:11px;color:var(--text3);margin-bottom:14px">Build your own scope. Todos los precios en USD. 50% adelanto requerido. Rush (+50% faster) = +30% surcharge. Revision adicional = +$50</div>';
-  html+='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">';
-  html+='<div style="display:grid;grid-template-columns:1fr 100px;background:#1a1d2e;padding:10px 16px">';
-  html+='<div style="font-size:10px;font-weight:700;color:#fff;letter-spacing:.8px;text-transform:uppercase">SERVICE</div>';
-  html+='<div style="font-size:10px;font-weight:700;color:#fff;letter-spacing:.8px;text-transform:uppercase;text-align:right">PRICE (USD)</div>';
-  html+='</div>';
-  for(var i=0;i<INDIVIDUAL_SERVICES.length;i++){
-    var sv=INDIVIDUAL_SERVICES[i];
-    var odd=i%2===0;
-    html+='<div style="display:grid;grid-template-columns:1fr 100px;padding:9px 16px;background:'+(odd?'var(--bg2)':'#fff')+';border-top:1px solid var(--border)">';
-    html+='<div>';
-    html+='<div style="font-size:11.5px;font-weight:'+(sv.bold?'700':'500')+'">'+sv.name+'</div>';
-    if(sv.detail)html+='<div style="font-size:9px;color:var(--text3);margin-top:2px;line-height:1.4">'+sv.detail+'</div>';
+  // ── SERVICES TAB ──
+  if(tab==='services'){
+    html+='<div style="max-width:800px">';
+    html+='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Servicios Individuales</div>';
+    html+='<div style="font-size:11px;color:var(--text3);margin-bottom:16px">Build your own scope. Todos los precios en USD. 50% adelanto requerido para iniciar. Rush (50% faster) = +30%. Revision adicional = +$50.</div>';
+    html+='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px">';
+    html+='<div style="display:grid;grid-template-columns:1fr 100px;background:#1a1d2e;padding:10px 16px">';
+    html+='<div style="font-size:10px;font-weight:700;color:#fff;letter-spacing:.8px;text-transform:uppercase">SERVICE</div>';
+    html+='<div style="font-size:10px;font-weight:700;color:#fff;letter-spacing:.8px;text-transform:uppercase;text-align:right">PRICE (USD)</div>';
     html+='</div>';
-    html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;color:var(--text)">$'+sv.price.toLocaleString()+'</div>';
+    for(var i=0;i<INDIVIDUAL_SERVICES.length;i++){
+      var sv=INDIVIDUAL_SERVICES[i];var odd=i%2===0;
+      html+='<div style="display:grid;grid-template-columns:1fr 100px;padding:9px 16px;background:'+(odd?'var(--bg2)':'#fff')+';border-top:1px solid var(--border)">';
+      html+='<div><div style="font-size:11.5px;font-weight:'+(sv.bold?'700':'500')+'">'+sv.name+'</div>';
+      if(sv.detail)html+='<div style="font-size:9px;color:var(--text3);margin-top:2px;line-height:1.4">'+sv.detail+'</div>';
+      html+='</div>';
+      html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;color:var(--text)">$'+sv.price.toLocaleString()+'</div>';
+      html+='</div>';
+    }
     html+='</div>';
+    html+='<div style="padding:12px 16px;background:var(--indigo-bg);border:1px solid var(--indigo-bd);border-radius:10px;font-size:10.5px;color:var(--text2);line-height:1.8">';
+    html+='<b>Rush:</b> 50% faster = +30% &nbsp;&middot;&nbsp; <b>Revision adicional</b> = +$50 &nbsp;&middot;&nbsp; <b>Deposito:</b> 50% para comenzar, 50% al entregar';
+    html+='</div>';
+    html+='</div></div></div>';
+    return html;
   }
-  html+='</div></div>';
+
+  // Individual Services table removed from packages tab — now in its own tab above
 
   html+='</div></div>';
   return html;
@@ -2143,7 +2155,7 @@ var INDIVIDUAL_SERVICES=[
   {id:'sv16',name:'Brand Elements',detail:'3 Concepts: Patterns, Textures, Icons, Supporting Graphic Elements + 2 Revision Rounds',price:180,days:3},
   {id:'sv17',name:'Brochure / Flyer Design',detail:'1 Concept + 1 Revision Round + Print-Ready Files',price:450,days:3},
   {id:'sv18',name:'Merchandising',detail:'4 Concepts + 1 Revision Round | Extra Merch Application = +$50',price:250,days:3},
-  {id:'sv19',name:'Signage & Environmental Graphics',detail:'2 Concepts + 2 Revision Rounds | Custom signage systems, murals, wall graphics, environmental branding, wayfinding, icon systems and large-format visual applications',price:600,days:5,bold:true}
+  {id:'sv19',name:'Signage & Environmental Graphics',detail:'2 Concepts + 2 Revision Rounds | Custom signage systems, murals, wall graphics, environmental branding, wayfinding, icon systems and large-format visual applications',price:280,days:5,bold:true}
 ];
 
 function openClientModal(){
@@ -2284,6 +2296,57 @@ render=function(){
   saveToStorage();
 };
 
+function openEditClientModal(id){
+  var c=DB.clients.find(function(x){return x.id===id;});
+  if(!c)return;
+  var pkgOpts=PKGS.map(function(p){return[p.id,p.name+' ($'+p.price.toLocaleString()+')'];});
+  pkgOpts.push(['custom','Servicios individuales']);
+  showModal(
+    '<h3>Editar cliente</h3>'+
+    '<div style="margin-bottom:10px"><label class="fl">Empresa</label>'+
+    '<input id="ec-co" class="fs" value="'+c.co.replace(/"/g,'&quot;')+'"/></div>'+
+    '<div style="margin-bottom:10px"><label class="fl">Contacto</label>'+
+    '<input id="ec-nm" class="fs" value="'+(c.nm||'').replace(/"/g,'&quot;')+'"/></div>'+
+    '<div style="margin-bottom:10px"><label class="fl">Email</label>'+
+    '<input id="ec-em" class="fs" value="'+(c.em||'').replace(/"/g,'&quot;')+'"/></div>'+
+    fsel('Paquete','ec-pk',pkgOpts)+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+    '<div><label class="fl">Presupuesto ($)</label>'+
+    '<input id="ec-bg" class="fs" type="number" value="'+(c.budget||0)+'"/></div>'+
+    '<div>'+fsel('Estado','ec-st',[['active','Activo'],['pending','En proceso'],['paused','Pausado']])+'</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+    '<div><label class="fl">Fecha inicio</label>'+
+    '<input id="ec-sd" class="fs" type="date" value="'+(c.start||'')+'"/></div>'+
+    '<div><label class="fl">Fecha entrega</label>'+
+    '<input id="ec-ed" class="fs" type="date" value="'+(c.end||'')+'"/></div>'+
+    '</div>'+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveEditClient('+id+')">Guardar cambios</button></div>'
+  );
+  setTimeout(function(){
+    var pkEl=document.getElementById('ec-pk');
+    var stEl=document.getElementById('ec-st');
+    if(pkEl)pkEl.value=c.pkg||'starter';
+    if(stEl)stEl.value=c.st||'active';
+  },0);
+}
+
+function saveEditClient(id){
+  var c=DB.clients.find(function(x){return x.id===id;});
+  if(!c)return;
+  var newCo=document.getElementById('ec-co').value||c.co;
+  c.co=newCo;
+  c.nm=document.getElementById('ec-nm').value||c.nm;
+  c.em=document.getElementById('ec-em').value||c.em;
+  c.pkg=document.getElementById('ec-pk').value||c.pkg;
+  c.budget=parseInt(document.getElementById('ec-bg').value)||c.budget;
+  c.st=document.getElementById('ec-st').value||c.st;
+  c.start=document.getElementById('ec-sd').value||c.start;
+  c.end=document.getElementById('ec-ed').value||c.end;
+  c.in=newCo.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+  c.ups.unshift({t:'Datos del cliente actualizados',d:'Hoy',c:cc(c,0)});
+  closeM();buildNav();render();
+}
 function openMeetModal(cl,dateStr){
   var opts=DB.clients.map(function(c){return'<option'+(c.co===cl?' selected':'')+'>'+c.co+'</option>';}).join('');
   showModal('<h3>Nueva reunion</h3>'+fg('Titulo','m-ti','Review semanal...','')+' <div class="fg"><label class="fl">Cliente</label><select class="fs" id="m-cl">'+opts+'</select></div>'+fg('Fecha','m-dt','',(dateStr?'':'date'))+fg('Hora','m-hr','','time')+fsel('Plataforma','m-ty',[['google','Google Meet'],['zoom','Zoom'],['video','Videollamada']])+'<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveMeet()">Agendar</button></div>');
