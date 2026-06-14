@@ -405,6 +405,20 @@ function getCustomSteps(c){
   });
 }
 
+function genMeetLink(){
+  // Generate a valid Google Meet room code (xxx-xxxx-xxx format)
+  var chars='abcdefghijkmnpqrstuvwxyz';
+  function seg(n){var s='';for(var i=0;i<n;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
+  return'https://meet.google.com/'+seg(3)+'-'+seg(4)+'-'+seg(3);
+}
+function genZoomLink(){
+  // Generate a Zoom meeting number
+  var num='';for(var i=0;i<10;i++)num+=Math.floor(Math.random()*10);
+  return'https://zoom.us/j/'+num;
+}
+function genMeetingLink(platform){
+  return platform==='zoom'?genZoomLink():genMeetLink();
+}
 function addBusinessDays(startDate, n){
   var d=new Date(startDate);var count=0;
   while(count<n){d.setDate(d.getDate()+1);var day=d.getDay();if(day!==0&&day!==6)count++;}
@@ -422,8 +436,8 @@ function findFreeTime(dateStr){
 function addAutoMeetings(c){
   if(!c.start)return;
   var startD=new Date(c.start+'T12:00');
-  var zoomLink='https://zoom.us/start/videomeeting';
-  var meetLink='https://meet.new';
+  var zoomLink=genZoomLink();
+  var meetLink=genMeetLink();
 
   // Build invite email body for a meeting
   function buildInviteBody(title,date,time,type,desc,clientName,clientEmail){
@@ -444,13 +458,16 @@ function addAutoMeetings(c){
     var d=addBusinessDays(startD,bDaysFromStart);
     var dateStr=toDateStr(d);
     var time=isKickoff?'09:00':findFreeTime(dateStr);
-    var link=type==='zoom'?zoomLink:meetLink;
-    var inviteUrl=c.email?buildInviteBody(title,dateStr,time,type,desc,c.nm||c.co,c.email):'';
+    // Use client's preferred platform, override type
+    var clientPlatform=c.platform||'google';
+    var actualType=clientPlatform==='zoom'?'zoom':'google';
+    var link=genMeetingLink(actualType);
+    var inviteUrl=c.email?buildInviteBody(title,dateStr,time,actualType,desc,c.nm||c.co,c.email):'';
     DB.meetings.push({
       id:Date.now()+Math.random(),
       ttl:title+' — '+c.co,
       cl:c.co,date:dateStr,time:time,
-      type:type,dur:dur,link:link,
+      type:actualType,dur:dur,link:link,
       auto:true,desc:desc,
       inviteUrl:inviteUrl,
       clientEmail:c.email||''
@@ -2511,6 +2528,7 @@ function openClientModal(){
     fsel('Tipo *','c-ct',[['fixed','Fijo (recurrente)'],['once','Servicio unico']])+
     pkgSel+svcChecks+
     fg('Presupuesto ($) *','c-bg','0','number')+
+    fsel('Plataforma de reuniones *','c-platform',[['google','Google Meet'],['zoom','Zoom']])+
     fg('Fecha inicio *','c-sd','','date','onchange="recalcEndDate()"')+
     fg('Fecha entrega *','c-ed','','date')+
     '<div style="font-size:9px;color:var(--text3);margin-top:-8px;margin-bottom:12px">La fecha de entrega se calcula automaticamente segun el paquete al elegir fecha de inicio.</div>'+
@@ -2602,6 +2620,7 @@ function saveClient(){
     type:'',ct:document.getElementById('c-ct').value,st:'pending',since:'Jun 2026',
     budget:bg,paid:0,pending:bg,dep:false,pkg:pkg,selectedSvcs:selectedSvcs,
     svs:['Branding'],email:document.getElementById('c-em').value||'',phone:'',
+    platform:(document.getElementById('c-platform')||{}).value||'google',
     h:{total:wks*5,used:0},start:sd,end:ed,wks:wks,stepsDone:[],
     wp:[{w:1,l:'Brief',p:20},{w:Math.round(wks*.5),l:'En proceso',p:60},{w:wks,l:'Entrega',p:100}],
     notes:'Nuevo cliente.',ups:[{t:'Cliente registrado',d:'Jun 2026',c:col[0]}]
@@ -2672,6 +2691,7 @@ function openEditClientModal(id){
     '<div style="margin-bottom:10px"><label class="fl">Email</label>'+
     '<input id="ec-em" class="fs" value="'+(c.em||'').replace(/"/g,'&quot;')+'"/></div>'+
     fsel('Paquete','ec-pk',pkgOpts)+
+    fsel('Plataforma de reuniones','ec-platform',[['google','Google Meet'],['zoom','Zoom']])+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
     '<div><label class="fl">Presupuesto ($)</label>'+
     '<input id="ec-bg" class="fs" type="number" value="'+(c.budget||0)+'"/></div>'+
@@ -2688,8 +2708,10 @@ function openEditClientModal(id){
   setTimeout(function(){
     var pkEl=document.getElementById('ec-pk');
     var stEl=document.getElementById('ec-st');
+    var plEl=document.getElementById('ec-platform');
     if(pkEl)pkEl.value=c.pkg||'starter';
     if(stEl)stEl.value=c.st||'active';
+    if(plEl)plEl.value=c.platform||'google';
   },0);
 }
 
@@ -2701,6 +2723,7 @@ function saveEditClient(id){
   c.nm=document.getElementById('ec-nm').value||c.nm;
   c.em=document.getElementById('ec-em').value||c.em;
   c.pkg=document.getElementById('ec-pk').value||c.pkg;
+  c.platform=document.getElementById('ec-platform').value||c.platform||'google';
   c.budget=parseInt(document.getElementById('ec-bg').value)||c.budget;
   c.st=document.getElementById('ec-st').value||c.st;
   c.start=document.getElementById('ec-sd').value||c.start;
