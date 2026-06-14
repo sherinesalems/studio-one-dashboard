@@ -838,7 +838,6 @@ function rClients(){
     html+='<span class="pill '+(c.st==='active'?'p-lime':c.st==='pending'?'p-amber':'p-neutral')+'">'+(c.st==='active'?'Activo':c.st==='pending'?'En proceso':'Pausado')+'</span>';
     if(!c.dep)html+='<button class="btn btn-lime btn-xs" onclick="event.stopPropagation();markDep('+c.id+')">50% recibido</button>';
     html+='<button class="btn btn-light btn-xs" onclick="event.stopPropagation();openEditClientModal('+c.id+')" title="Editar cliente">&#9998; Editar</button>';
-    html+='<button class="btn btn-light btn-xs" onclick="event.stopPropagation();openEditClientModal('+c.id+')" title="Editar">&#9998; Editar</button>';
     html+='<button class="btn btn-rose btn-xs" onclick="event.stopPropagation();delClient('+c.id+')" title="Eliminar cliente">&#128465; Eliminar</button>';
     html+='</div></div>';
   }
@@ -1601,7 +1600,7 @@ function rSchedule(){
     for(var j=0;j<ms.length;j++){
       var mtEv=ms[j];
       var shortTitle=mtEv.ttl.length>16?mtEv.ttl.substring(0,14)+'…':mtEv.ttl;
-      cells+='<div class="cal-ev" onclick="editMeet('+mtEv.id+')" style="cursor:pointer;background:'+(mtEv.type==='google'?'#e8f5e9':mtEv.type==='zoom'?'#eef4ff':'var(--violet-bg)')+';color:'+(mtEv.type==='google'?'#00832d':mtEv.type==='zoom'?'#2D8CFF':'var(--violet)')+'" title="'+mtEv.ttl+' · '+mtEv.time+(mtEv.desc?' — '+mtEv.desc:'')+' (click para editar)">📹 '+shortTitle+'</div>';
+      var mtCl2=DB.clients.find(function(x){return x.co===mtEv.cl;});var mtBg=mtCl2?cc(mtCl2,1):(mtEv.type==='google'?'#e8f5e9':mtEv.type==='zoom'?'#eef4ff':'var(--violet-bg)');var mtFg=mtCl2?cc(mtCl2,0):(mtEv.type==='google'?'#00832d':mtEv.type==='zoom'?'#2D8CFF':'var(--violet)');cells+='<div class="cal-ev" onclick="editMeet('+mtEv.id+')" style="cursor:pointer;background:'+mtBg+';color:'+mtFg+'" title="'+mtEv.ttl+' · '+mtEv.time+(mtEv.desc?' — '+mtEv.desc:'')+' (click para editar)">📹 '+shortTitle+'</div>';
     }
     for(var j=0;j<Math.min(2,ts.length);j++){
       var tEv=ts[j];var cl2=DB.clients.find(function(c){return c.co===tEv.cl;});
@@ -2230,7 +2229,21 @@ function rReports(){
 // ── MODALS ──
 function showModal(h){document.getElementById('modal-body').innerHTML=h;document.getElementById('modal-bg').classList.remove('hidden');}
 function closeM(){document.getElementById('modal-bg').classList.add('hidden');}
-function fg(l,id,ph,type){return'<div class="fg"><label class="fl">'+l+'</label><input class="fi" id="'+id+'" placeholder="'+ph+'" type="'+(type||'text')+'"/></div>';}
+function fg(l,id,ph,type,attrs){return'<div class="fg"><label class="fl">'+l+'</label><input class="fi" id="'+id+'" placeholder="'+ph+'" type="'+(type||'text')+'" '+(attrs||'')+'/></div>';}
+function recalcEndDate(){
+  var sdField=document.getElementById('c-sd');
+  var pkField=document.getElementById('c-pk');
+  var edField=document.getElementById('c-ed');
+  if(!sdField||!pkField||!edField)return;
+  var sd=sdField.value;var pkId=pkField.value;
+  if(!sd||!pkId||pkId==='custom')return;
+  var pkg=PKGS.find(function(p){return p.id===pkId;});
+  if(!pkg)return;
+  var d=new Date(sd+'T12:00');var count=0;
+  while(count<pkg.totalDays){d.setDate(d.getDate()+1);var day=d.getDay();if(day!==0&&day!==6)count++;}
+  var mo=d.getMonth()+1;var dy=d.getDate();
+  edField.value=d.getFullYear()+'-'+(mo<10?'0':'')+mo+'-'+(dy<10?'0':'')+dy;
+}
 function fsel(l,id,opts){var o='';for(var i=0;i<opts.length;i++)o+='<option value="'+opts[i][0]+'">'+opts[i][1]+'</option>';return'<div class="fg"><label class="fl">'+l+'</label><select class="fs" id="'+id+'">'+o+'</select></div>';}
 function fta(l,id,ph){return'<div class="fg"><label class="fl">'+l+'</label><textarea class="fi fta" id="'+id+'" placeholder="'+ph+'"></textarea></div>';}
 
@@ -2259,53 +2272,81 @@ var INDIVIDUAL_SERVICES=[
 
 function openClientModal(){
   var pkgOpts=PKGS.map(function(p){return[p.id,p.name+' ($'+p.price.toLocaleString()+')'];});
-  pkgOpts.push(['custom','Servicio suelto']);
-  var svcChecks='<div id="svc-picker" style="display:none"><div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Selecciona los servicios</div><div id="svc-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:220px;overflow-y:auto">';
+  pkgOpts.push(['custom','Servicios individuales']);
+  var svcChecks='<div id="svc-picker" style="display:none"><div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Selecciona los servicios</div><div id="svc-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:190px;overflow-y:auto">';
   for(var i=0;i<INDIVIDUAL_SERVICES.length;i++){
-    var sv=INDIVIDUAL_SERVICES[i];
-    var odd=i%2===0;
-    svcChecks+='<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;background:'+(odd?'var(--bg2)':'#fff')+';border-bottom:1px solid var(--border);transition:background .1s" onmouseover="this.style.background=\'var(--indigo-bg)\'" onmouseout="this.style.background=\''+(odd?'var(--bg2)':'#fff')+'\'">';
-    svcChecks+='<input type="checkbox" id="svc-'+sv.id+'" value="'+sv.id+'" onchange="updateSvcTotal()" style="width:13px;height:13px;accent-color:var(--text2);flex-shrink:0"/>';
+    var sv=INDIVIDUAL_SERVICES[i];var odd=i%2===0;
+    svcChecks+='<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;background:'+(odd?'var(--bg2)':'#fff')+';border-bottom:1px solid var(--border)">';
+    svcChecks+='<input type="checkbox" id="svc-'+sv.id+'" value="'+sv.id+'" onchange="updateSvcTotal()" style="width:13px;height:13px;accent-color:var(--indigo);flex-shrink:0"/>';
     svcChecks+='<span style="flex:1;font-size:11px">'+sv.name+'</span>';
-    svcChecks+='<span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap">$'+sv.price.toLocaleString()+'</span>';
-    svcChecks+='</label>';
+    svcChecks+='<span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text2)">$'+sv.price.toLocaleString()+'</span></label>';
   }
-  svcChecks+='</div><div id="svc-total" style="margin-top:6px;font-size:11px;color:var(--text3);text-align:right">Total: <span style="font-family:var(--mono);font-weight:600;color:var(--text2)">$0</span></div></div>';
+  svcChecks+='</div><div id="svc-total" style="margin-top:6px;font-size:11px;color:var(--text3);text-align:right">Total: <span style="font-family:var(--mono);font-weight:600;color:var(--indigo)">$0</span></div></div>';
+
+  var pkgSel='<div class="fg"><label class="fl">Paquete *</label><select class="fi" id="c-pk" onchange="toggleSvcPicker(this.value)">'+pkgOpts.map(function(o){return'<option value="'+o[0]+'">'+o[1]+'</option>';}).join('')+'</select></div>';
+
   showModal(
     '<h3>Nuevo cliente</h3>'+
-    fg('Empresa','c-co','Ej. Bloom Studio','')+
-    fg('Contacto','c-nm','Ej. Maria Lopez','')+
-    fsel('Tipo','c-ct',[['fixed','Fijo (recurrente)'],['once','Servicio unico']])+
-    fsel('Paquete','c-pk',pkgOpts)+
-    svcChecks+
-    fg('Presupuesto ($)','c-bg','0','number')+
-    fg('Email','c-em','cliente@email.com','')+
-    fg('Fecha inicio','c-sd','','date')+
-    fg('Fecha entrega','c-ed','','date')+
-    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveClient()">Crear</button></div>'
+    '<div style="font-size:9px;color:var(--rose);margin-bottom:10px;padding:6px 8px;background:var(--rose-bg);border-radius:6px">* Todos los campos son obligatorios para crear el cliente</div>'+
+    fg('Empresa *','c-co','Ej. Bloom Studio','')+
+    fg('Contacto *','c-nm','Ej. Maria Lopez','')+
+    fg('Email del cliente *','c-em','cliente@email.com','email')+
+    fsel('Tipo *','c-ct',[['fixed','Fijo (recurrente)'],['once','Servicio unico']])+
+    pkgSel+svcChecks+
+    fg('Presupuesto ($) *','c-bg','0','number')+
+    fg('Fecha inicio *','c-sd','','date','onchange="recalcEndDate()"')+
+    fg('Fecha entrega *','c-ed','','date')+
+    '<div style="font-size:9px;color:var(--text3);margin-top:-8px;margin-bottom:12px">La fecha de entrega se calcula automaticamente segun el paquete al elegir fecha de inicio.</div>'+
+    '<button id="btn-crear" disabled style="width:100%;padding:10px;background:var(--indigo);color:#fff;border:none;border-radius:9px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:not-allowed;opacity:.4" onclick="saveClient()">Crear cliente</button>'+
+    '<div style="text-align:center;margin-top:8px"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button></div>'
   );
-  // Attach change listener after modal is in DOM
   setTimeout(function(){
     var pkSel=document.getElementById('c-pk');
-    if(pkSel){
-      pkSel.addEventListener('change',function(){toggleSvcPicker(this.value);});
-      toggleSvcPicker(pkSel.value);
-    }
+    if(pkSel){pkSel.addEventListener('change',function(){toggleSvcPicker(this.value);});toggleSvcPicker(pkSel.value);}
+    var fields=['c-co','c-nm','c-em','c-bg','c-sd','c-ed'];
+    fields.forEach(function(fid){var el=document.getElementById(fid);if(el)el.addEventListener('input',validateClientForm);});
+    if(pkSel)pkSel.addEventListener('change',validateClientForm);
+    validateClientForm();
   },0);
 }
+function validateClientForm(){
+  var btn=document.getElementById('btn-crear');if(!btn)return;
+  var co=(document.getElementById('c-co')||{}).value||'';
+  var nm=(document.getElementById('c-nm')||{}).value||'';
+  var em=(document.getElementById('c-em')||{}).value||'';
+  var bg=(document.getElementById('c-bg')||{}).value||'';
+  var sd=(document.getElementById('c-sd')||{}).value||'';
+  var ed=(document.getElementById('c-ed')||{}).value||'';
+  var valid=co.trim()&&nm.trim()&&em.indexOf('@')>0&&parseInt(bg)>0&&sd&&ed;
+  btn.disabled=!valid;btn.style.opacity=valid?'1':'0.4';btn.style.cursor=valid?'pointer':'not-allowed';
+}
+
 
 function toggleSvcPicker(val){
   var picker=document.getElementById('svc-picker');
   var bgField=document.getElementById('c-bg');
+  var edField=document.getElementById('c-ed');
+  var sdField=document.getElementById('c-sd');
   if(!picker)return;
   if(val==='custom'){
     picker.style.display='block';
     updateSvcTotal();
   } else {
     picker.style.display='none';
-    // Auto-fill budget from package price
     var pkg=PKGS.find(function(p){return p.id===val;});
-    if(pkg&&bgField&&(!bgField.value||bgField.value==='0'))bgField.value=pkg.price;
+    if(pkg){
+      // Always auto-fill budget
+      if(bgField)bgField.value=pkg.price;
+      // Auto-calc end date from start + totalDays (business days)
+      var sd=sdField?sdField.value:'';
+      if(sd&&edField){
+        var d=new Date(sd+'T12:00');
+        var count=0;
+        while(count<pkg.totalDays){d.setDate(d.getDate()+1);var day=d.getDay();if(day!==0&&day!==6)count++;}
+        var mo=d.getMonth()+1;var dy=d.getDate();
+        edField.value=d.getFullYear()+'-'+(mo<10?'0':'')+mo+'-'+(dy<10?'0':'')+dy;
+      }
+    }
   }
 }
 
