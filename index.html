@@ -233,7 +233,7 @@ var PAL=[
   ['#f9a8d4','#fdf2f8','#fce7f3']   // soft mauve
 ];
 function cc(c,i){return c.color[i||0];}
-var TODAY='2026-06-12';
+var TODAY=(function(){var d=new Date();var m=d.getMonth()+1;var dy=d.getDate();return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(dy<10?'0':'')+dy;})();
 var todayD=new Date(TODAY);
 
 var PKGS=[
@@ -372,7 +372,7 @@ var PKGS=[
 
 
 var DB={
-  view:'dashboard',selClient:null,clientFilter:'all',calMonth:5,calYear:2026,projectPkgFilter:'all',pkgTab:'packages',
+  view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
   tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
@@ -2138,14 +2138,33 @@ async function sendKickoffEmail(clientId){
   var emailData=buildKickoffEmail(c,kickoffMeeting);
   var btn=document.getElementById('kickoff-btn-'+clientId);
   if(btn){btn.textContent='Enviando...';btn.disabled=true;}
-  var result=await sendEmail(c.email,emailData.subject,emailData.body,false);
-  if(btn){
-    if(result&&result.success){
-      btn.textContent='Enviado';btn.style.background='var(--lime-bg)';btn.style.color='var(--lime)';
-      c.kickoffSent=true;render();
-    } else {
-      btn.textContent='Error — reintentar';btn.disabled=false;
-    }
+
+  // Try API first, fallback to mailto
+  var sent=false;
+  if(DB.gmailUser&&DB.gmailAppPw){
+    try{
+      var resp=await fetch('/api/send-email',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({gmailUser:DB.gmailUser,gmailAppPw:DB.gmailAppPw.replace(/\s/g,''),to:c.email,subject:emailData.subject,body:emailData.body})
+      });
+      var data=await resp.json();
+      if(data.success){sent=true;}
+      else{console.error('API error:',data.error);}
+    }catch(e){console.error('Fetch error:',e);}
+  }
+
+  if(sent){
+    if(btn){btn.textContent='✓ Enviado';btn.style.background='var(--lime-bg)';btn.style.color='var(--indigo)';btn.disabled=true;}
+    c.kickoffSent=true;render();
+  } else {
+    // Fallback: open in mail client
+    var mailtoUrl='mailto:'+c.email+'?subject='+encodeURIComponent(emailData.subject)+'&body='+encodeURIComponent(emailData.body);
+    window.open(mailtoUrl,'_blank');
+    if(btn){btn.textContent='Abrir en Gmail';btn.style.background='var(--indigo-bg)';btn.style.color='var(--indigo)';btn.disabled=false;}
+    // Mark as sent anyway since user will send manually
+    c.kickoffSent=true;
+    setTimeout(function(){if(btn){btn.textContent='✓ Abierto en Gmail';btn.disabled=true;}render();},3000);
   }
 }
 
