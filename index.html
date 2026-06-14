@@ -161,7 +161,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
   <div class="login-box">
     <div class="lm"><svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill="white"/><rect x="8" y="1" width="5" height="5" rx="1" fill="white" opacity=".5"/><rect x="1" y="8" width="5" height="5" rx="1" fill="white" opacity=".5"/><rect x="8" y="8" width="5" height="5" rx="1" fill="white" opacity=".25"/></svg></div>
     <div class="ln">Studio One</div>
-    <div class="ls">CEO Dashboard &middot; Acceso privado</div>
+    <div class="ls">Studio One &middot; Acceso privado</div>
     <div id="login-form">
       <input class="lpw" type="password" id="pw" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;" onkeydown="if(event.key==='Enter')doLogin()"/>
       <button class="lbtn" onclick="doLogin()">Ingresar al sistema</button>
@@ -190,10 +190,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
   <div class="sidebar">
     <div class="logo-a">
       <div class="logo-mk"><svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill="white"/><rect x="8" y="1" width="5" height="5" rx="1" fill="white" opacity=".5"/><rect x="1" y="8" width="5" height="5" rx="1" fill="white" opacity=".5"/><rect x="8" y="8" width="5" height="5" rx="1" fill="white" opacity=".25"/></svg></div>
-      <div><div class="logo-nm">Studio One</div><div class="logo-sb">CEO Dashboard</div></div>
+      <div><div class="logo-nm">Studio One</div><div class="logo-sb">Brand Studio</div></div>
     </div>
     <div class="nav-w" id="nav-w"></div>
-    <div class="sf"><div class="sav">S1</div><div><div style="font-size:11.5px;font-weight:500">Studio One</div><div style="font-size:9px;color:var(--text3)">CEO &middot; Brand Director</div></div></div>
+    <div class="sf"><div class="sav">SS</div><div><div style="font-size:11px;font-weight:600">Sherine Salem</div><div style="font-size:9px;color:var(--text3)">Graphic Designer</div><div style="font-size:8.5px;color:var(--text3)">+51 941 392 581</div></div></div>
   </div>
   <div class="main" id="main"></div>
 </div>
@@ -436,7 +436,7 @@ function addAutoMeetings(c){
         +'Fecha: '+date+'\nHora: '+time+'\nPlataforma: '+platform+'\nLink: '+link+'\n\n'
         +desc+'\n\n'
         +'Cualquier pregunta no dudes en escribirme.\n\n'
-        +'Saludos,\nSherine Salem\nStudio One\n'
+        +'Saludos,\nSherine Salem\nGraphic Designer\n+51 941 392 581\nhttps://www.sherinesalemscander.com/\n'
       );
   }
 
@@ -2079,8 +2079,9 @@ function buildKickoffEmail(c,meeting){
     +'Cualquier pregunta, escríbeme aqui o por WhatsApp.\n\n'
     +'Con mucho entusiasmo,\n'
     +'Sherine Salem\n'
-    +'Studio One — Visual Identity Studio\n'
-    +'Lima, Peru';
+    +'Graphic Designer\n'
+    +'+51 941 392 581\n'
+    +'https://www.sherinesalemscander.com/';
   return{subject,body};
 }
 
@@ -2114,7 +2115,7 @@ async function saveDraftEmail(mtId){
     +'   Link: '+mt.link+'\n\n'
     +(mt.desc?'Agenda: '+mt.desc+'\n\n':'')
     +'Por favor confirma tu asistencia respondiendo este correo.\n\n'
-    +'Saludos,\nSherine Salem\nStudio One';
+    +'Saludos,\nSherine Salem\nGraphic Designer\n+51 941 392 581\nhttps://www.sherinesalemscander.com/';
   var result=await sendEmail(mt.clientEmail,subject,body,true);
   var statusEl=document.getElementById('draft-status-'+mtId);
   if(statusEl){
