@@ -373,7 +373,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:5,calYear:2026,projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -580,7 +580,8 @@ var NAVITEMS=[
   {v:'finance',lbl:'Finanzas',ic:'<path d="M8 1v14M5 4h4.5a2.5 2.5 0 010 5H5m0 0h5a2.5 2.5 0 010 5H5"/>',g:'Gestion'},
   {v:'social',lbl:'Social Media',ic:'<circle cx="12" cy="3" r="2"/><circle cx="4" cy="8" r="2"/><circle cx="12" cy="13" r="2"/><path d="M5.8 9l4.4 3M10.2 4L5.8 7"/>',g:'Gestion'},
   {v:'reports',lbl:'Reportes',ic:'<path d="M2 12l3-4 3 2 3-6 3 4"/>',g:'Gestion'},
-  {v:'buffer',lbl:'Buffer / Redes',ic:'<circle cx="8" cy="12" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="12" r="2"/><line x1="9.4" y1="11" x2="10.6" y2="9"/><line x1="13.4" y1="9" x2="14.6" y2="11"/>',g:'Gestion'}
+  {v:'buffer',lbl:'Buffer / Redes',ic:'<circle cx="8" cy="12" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="12" r="2"/><line x1="9.4" y1="11" x2="10.6" y2="9"/><line x1="13.4" y1="9" x2="14.6" y2="11"/>',g:'Gestion'},
+  {v:'gmail',lbl:'Gmail / Invites',ic:'<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>',g:'Gestion'}
 ];
 
 function buildNav(){
@@ -664,6 +665,7 @@ function render(){
   else if(DB.view==='social')m.innerHTML=rSocial();
   else if(DB.view==='reports')m.innerHTML=rReports();
   else if(DB.view==='buffer')m.innerHTML=rBuffer();
+  else if(DB.view==='gmail')m.innerHTML=rGmailSettings();
 }
 
 // ── DASHBOARD ──
@@ -1634,6 +1636,7 @@ function rSchedule(){
     if(mt.link)html+='<a href="'+mt.link+'" target="_blank" class="btn btn-light btn-xs">Unirse — '+(mt.type==='zoom'?'Zoom':'Meet')+'</a>';
     else html+='<button class="btn btn-light btn-xs">Unirse</button>';
     if(mt.inviteUrl&&mt.clientEmail)html+='<a href="'+mt.inviteUrl+'" class="btn btn-light btn-xs" title="Abrir borrador de email para '+mt.clientEmail+'">📧 Enviar invite</a>';
+    if(mt.clientEmail&&DB.gmailAppPw)html+='<button class="btn btn-light btn-xs" onclick="saveDraftEmail('+mt.id+')">📝 Guardar Draft</button><span id="draft-status-'+mt.id+'" style="font-size:9px;color:var(--indigo)"></span>';
     html+='<button class="btn btn-light btn-xs" onclick="editMeet('+mt.id+')">✏️ Editar</button>';
     html+='<button class="btn btn-rose btn-xs" onclick="delMeet('+mt.id+')">&#10005;</button>';
     html+='</div>';
@@ -2014,7 +2017,151 @@ function saveNewPost(){
   buildNav();render();
 }
 
-// ── BUFFER INTEGRATION ──
+// ── GMAIL INTEGRATION ──
+function saveGmailSettings(){
+  var user=(document.getElementById('gm-user')||{}).value||'';
+  var pw=(document.getElementById('gm-pw')||{}).value||'';
+  if(!user||!pw){alert('Ingresa tu email y app password.');return;}
+  localStorage.setItem('studioGmailUser',user);
+  localStorage.setItem('studioGmailPw',pw);
+  DB.gmailUser=user;DB.gmailAppPw=pw;
+  var el=document.getElementById('gm-status');
+  if(el){el.textContent='Guardado correctamente.';el.style.color='var(--lime)';}
+}
+
+function clearGmailSettings(){
+  localStorage.removeItem('studioGmailUser');localStorage.removeItem('studioGmailPw');
+  DB.gmailUser='';DB.gmailAppPw='';
+  render();
+}
+
+async function sendEmail(to,subject,body,saveAsDraft){
+  if(!DB.gmailUser||!DB.gmailAppPw){
+    // Fallback: open mailto
+    window.location.href='mailto:'+to+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    return{success:true,mode:'mailto'};
+  }
+  try{
+    var resp=await fetch('/api/send-email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({gmailUser:DB.gmailUser,gmailAppPw:DB.gmailAppPw,to,subject,body,saveAsDraft})
+    });
+    return await resp.json();
+  }catch(e){
+    // Fallback to mailto if API not available
+    window.location.href='mailto:'+to+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    return{success:true,mode:'mailto_fallback'};
+  }
+}
+
+function buildKickoffEmail(c,meeting){
+  var pkg=PKGS.find(function(p){return p.id===c.pkg;});
+  var pkgName=pkg?pkg.name:'tu proyecto';
+  var firstSteps=pkg?pkg.steps.slice(0,3).map(function(s){return '  - '+s.label+': '+s.bullets.slice(0,2).join(', ');}).join('\n'):'';
+  var link=meeting?meeting.link:'https://meet.google.com/studio-one';
+  var dateStr=meeting?meeting.date:'';
+  var timeStr=meeting?meeting.time:'';
+
+  var subject='[Studio One] Bienvenida + Primera reunion — '+pkgName;
+  var body='Hola '+(c.nm||c.co)+',\n\n'
+    +'Fue un gusto conectar contigo. Estoy emocionada de comenzar a trabajar en la identidad visual de '+(c.co)+'.\n\n'
+    +'Te confirmo nuestra primera reunion de trabajo:\n\n'
+    +'   Fecha: '+dateStr+'\n'
+    +'   Hora: '+timeStr+' (Lima, Peru)\n'
+    +'   Link: '+link+'\n\n'
+    +'En esta primera sesion revisaremos:\n'+firstSteps+'\n\n'
+    +'Para prepararnos, te pido que:\n'
+    +'  1. Tengas a mano referencias visuales que te inspiren (Pinterest, Instagram, etc.)\n'
+    +'  2. Pienses en 3 palabras que describan como quieres que se vea tu marca\n'
+    +'  3. Compartas algun logo o identidad visual de competidores que conozcas\n\n'
+    +'El cuestionario de marca te llegara por separado antes de nuestra reunion.\n\n'
+    +'Cualquier pregunta, escríbeme aqui o por WhatsApp.\n\n'
+    +'Con mucho entusiasmo,\n'
+    +'Sherine Salem\n'
+    +'Studio One — Visual Identity Studio\n'
+    +'Lima, Peru';
+  return{subject,body};
+}
+
+async function sendKickoffEmail(clientId){
+  var c=DB.clients.find(function(x){return x.id===clientId;});
+  if(!c||!c.email){alert('El cliente no tiene email registrado.');return;}
+  var kickoffMeeting=DB.meetings.find(function(m){return m.cl===c.co&&m.auto&&m.ttl.toLowerCase().indexOf('kick')>=0;});
+  var emailData=buildKickoffEmail(c,kickoffMeeting);
+  var btn=document.getElementById('kickoff-btn-'+clientId);
+  if(btn){btn.textContent='Enviando...';btn.disabled=true;}
+  var result=await sendEmail(c.email,emailData.subject,emailData.body,false);
+  if(btn){
+    if(result&&result.success){
+      btn.textContent='Enviado';btn.style.background='var(--lime-bg)';btn.style.color='var(--lime)';
+      c.kickoffSent=true;render();
+    } else {
+      btn.textContent='Error — reintentar';btn.disabled=false;
+    }
+  }
+}
+
+async function saveDraftEmail(mtId){
+  var mt=DB.meetings.find(function(m){return m.id===mtId;});
+  if(!mt||!mt.clientEmail){alert('Este meeting no tiene email de cliente.');return;}
+  var c=DB.clients.find(function(x){return x.co===mt.cl;});
+  var subject='[Studio One] '+mt.ttl;
+  var body='Hola '+(c?c.nm:mt.cl)+',\n\n'
+    +'Te confirmo nuestra proxima reunion:\n\n'
+    +'   Fecha: '+mt.date+'\n'
+    +'   Hora: '+mt.time+'\n'
+    +'   Link: '+mt.link+'\n\n'
+    +(mt.desc?'Agenda: '+mt.desc+'\n\n':'')
+    +'Por favor confirma tu asistencia respondiendo este correo.\n\n'
+    +'Saludos,\nSherine Salem\nStudio One';
+  var result=await sendEmail(mt.clientEmail,subject,body,true);
+  var statusEl=document.getElementById('draft-status-'+mtId);
+  if(statusEl){
+    if(result&&result.mode==='draft')statusEl.textContent='Guardado en Drafts';
+    else if(result&&result.mode==='mailto'||result&&result.mode==='mailto_fallback')statusEl.textContent='Abierto en Gmail';
+    else statusEl.textContent='Error';
+  }
+}
+// ── GMAIL SETTINGS PAGE ──
+function rGmailSettings(){
+  var connected=DB.gmailUser&&DB.gmailAppPw;
+  var html='<div class="topbar"><div><div class="tb-t">Gmail — Invitaciones y Drafts</div><div class="tb-s">Conecta tu Gmail para enviar invites y guardar borradores automaticamente</div></div></div>';
+  html+='<div class="content">';
+  if(connected){
+    html+='<div style="background:var(--lime-bg);border:1px solid var(--lime-bd);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px">';
+    html+='<div style="font-size:24px">✅</div><div><div style="font-size:13px;font-weight:600;color:var(--indigo)">Gmail conectado</div>';
+    html+='<div style="font-size:11px;color:var(--text2)">'+DB.gmailUser+'</div></div>';
+    html+='<button class="btn btn-rose btn-xs" style="margin-left:auto" onclick="clearGmailSettings()">Desconectar</button></div>';
+  }
+  html+='<div class="card" style="max-width:560px;margin-bottom:20px">';
+  html+='<div style="font-size:13px;font-weight:600;margin-bottom:4px">'+(connected?'Actualizar credenciales':'Conectar Gmail')+'</div>';
+  html+='<div style="font-size:10.5px;color:var(--text3);margin-bottom:14px;line-height:1.6">Ingresa tu Gmail y App Password. El App Password es distinto a tu contrasena normal de Google.</div>';
+  html+='<div class="fg"><label class="fl">Tu Gmail</label><input class="fi" id="gm-user" type="email" placeholder="tuemail@gmail.com" value="'+(DB.gmailUser||'')+'"/></div>';
+  html+='<div class="fg"><label class="fl">App Password (16 caracteres)</label><input class="fi" id="gm-pw" type="password" placeholder="xxxx xxxx xxxx xxxx" value="'+(DB.gmailAppPw||'')+'"/></div>';
+  html+='<div style="font-size:9.5px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg2);border-radius:7px;line-height:1.6">Para obtener tu App Password: <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--indigo)">myaccount.google.com/apppasswords</a> &rarr; Escribe un nombre &rarr; Create &rarr; Copia las 16 letras</div>';
+  html+='<button class="btn btn-dark btn-sm" onclick="saveGmailSettings()">Guardar y conectar</button> <span id="gm-status" style="font-size:10.5px"></span>';
+  html+='</div>';
+  var steps=[['📅','Nuevo cliente','El sistema crea todas las reuniones en Agenda segun el paquete contratado'],['📧','Kick-off automatico','El primer email de bienvenida + link se envia AUTOMATICAMENTE al cliente'],['📝','Resto de reuniones — Drafts','Cada reunion genera un borrador en tu Gmail listo para revisar y enviar'],['✏️','Tu revisas y envias','Abres Drafts, personalizas y envias cuando estes lista']];
+  html+='<div class="card" style="max-width:560px;margin-bottom:20px"><div style="font-size:12px;font-weight:600;margin-bottom:10px">Como funciona</div>';
+  for(var i=0;i<steps.length;i++)html+='<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px"><div style="font-size:18px;width:26px;flex-shrink:0">'+steps[i][0]+'</div><div><div style="font-size:11.5px;font-weight:600;margin-bottom:2px">'+steps[i][1]+'</div><div style="font-size:10.5px;color:var(--text3)">'+steps[i][2]+'</div></div></div>';
+  html+='</div>';
+  var cwEmail=DB.clients.filter(function(c){return c.email;});
+  if(cwEmail.length){
+    html+='<div class="shdr">Estado de kick-off emails</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    for(var i=0;i<cwEmail.length;i++){var c=cwEmail[i];
+      html+='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px">';
+      html+='<div style="font-size:11.5px;font-weight:600;margin-bottom:2px">'+c.co+'</div>';
+      html+='<div style="font-size:10px;color:var(--text3);margin-bottom:8px">'+c.email+'</div>';
+      html+=c.kickoffSent?'<span style="font-size:10px;color:var(--indigo);font-weight:600">✓ Kick-off enviado</span>':'<button id="kickoff-btn-'+c.id+'" class="btn btn-dark btn-xs" onclick="sendKickoffEmail('+c.id+')">📧 Enviar kick-off</button>';
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+  html+='</div>';
+  return html;
+}
 function rBuffer(){
   var connected=DB.bufferConnected||false;
   var accounts=DB.bufferAccounts||[];
@@ -2418,6 +2565,11 @@ function loadFromStorage(){
     if(save.monthly)DB.monthly=save.monthly;
     if(save.studio)DB.studio=save.studio;
     if(save.tlExpand)DB.tlExpand=save.tlExpand;
+    // Load Gmail credentials from localStorage (separate key for security)
+    var gUser=localStorage.getItem('studioGmailUser');
+    var gPw=localStorage.getItem('studioGmailPw');
+    if(gUser)DB.gmailUser=gUser;
+    if(gPw)DB.gmailAppPw=gPw;
     return true;
   }catch(e){console.warn('Load failed:',e);return false;}
 }
