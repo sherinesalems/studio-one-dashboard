@@ -422,8 +422,8 @@ function findFreeTime(dateStr){
 function addAutoMeetings(c){
   if(!c.start)return;
   var startD=new Date(c.start+'T12:00');
-  var zoomLink='https://zoom.us/j/studioone';
-  var meetLink='https://meet.google.com/studio-one';
+  var zoomLink='https://zoom.us/start/videomeeting';
+  var meetLink='https://meet.new';
 
   // Build invite email body for a meeting
   function buildInviteBody(title,date,time,type,desc,clientName,clientEmail){
@@ -964,23 +964,38 @@ function convertPot(id){var p=DB.potentials.find(function(x){return x.id===id;})
 function rTasks(){
   var cPend=DB.tasks.filter(function(t){return t.st==='pending';});
   var sPend=DB.studio.tasks.filter(function(t){return t.st==='pending';});
+  // Current week bounds
+  var todayDate=new Date(TODAY+'T12:00');
+  var weekStart=new Date(todayDate);weekStart.setDate(todayDate.getDate()-todayDate.getDay());
+  var weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
+  function isThisWeek(due){var d=new Date(due+'T12:00');return d>=weekStart&&d<=weekEnd;}
   var html='<div class="topbar"><div class="tb-t">Tareas</div><div style="display:flex;gap:6px"><button class="btn btn-violet btn-sm" onclick="openStudioTaskModal()">+ Estudio</button><button class="btn btn-dark btn-sm" onclick="openTaskModal()">+ Cliente</button></div></div>';
-  html+='<div class="content">';
-  html+='<div class="g2">';
-  // Client tasks
+  html+='<div class="content"><div class="g2">';
+  // LEFT: mini calendar
+  html+='<div style="max-width:280px"><div class="shdr">Calendario</div>'+rMiniCal()+'</div>';
+  // RIGHT: tasks
   html+='<div>';
-  html+='<div class="shdr">Clientes &mdash; Pendientes ('+cPend.length+')</div>';
-  if(!cPend.length)html+='<div style="font-size:11px;color:var(--text3);padding:8px 0">Sin tareas pendientes de clientes.</div>';
-  for(var i=0;i<cPend.length;i++){var t=cPend[i];html+='<div class="task"><div class="tck '+(t.st==='done'?'done':'')+'" onclick="toggleTask('+t.id+')"></div><div style="flex:1"><div class="ttl">'+t.ttl+'</div><div class="tmt">'+t.cl+' &middot; '+fmtDate(t.due)+'</div>'+(isUrgent(t)?'<span class="rbadge">&#9200; '+daysLeft(t.due)+'</span>':'')+'</div><div style="display:flex;gap:4px;align-items:center"><span class="pill '+(t.pr==='high'?'p-rose':t.pr==='medium'?'p-amber':'p-neutral')+'">'+(t.pr==='high'?'Alta':'Media')+'</span><button class="btn btn-light btn-xs" onclick="editTask('+t.id+')">✏️</button><button class="btn btn-rose btn-xs" onclick="delTask('+t.id+')">✕</button></div></div>';}
+  html+='<div class="shdr">Esta semana &mdash; Clientes</div>';
+  var thisWeekC=cPend.filter(function(t){return isThisWeek(t.due);});
+  var otherC=cPend.filter(function(t){return !isThisWeek(t.due);});
+  if(!thisWeekC.length&&!otherC.length)html+='<div style="font-size:11px;color:var(--text3);padding:8px 0">Sin tareas pendientes.</div>';
+  for(var i=0;i<thisWeekC.length;i++){
+    var t=thisWeekC[i];var cl=DB.clients.find(function(c){return c.co===t.cl;});
+    var clBg=cl?cc(cl,1):'var(--indigo-bg)';var clFg=cl?cc(cl,0):'var(--indigo)';
+    html+='<div class="task" style="border-left:3px solid '+clFg+';background:'+clBg+'20"><div class="tck '+(t.st==='done'?'done':'')+'" onclick="toggleTask('+t.id+')"></div><div style="flex:1"><div class="ttl">'+t.ttl+'</div><div class="tmt">'+t.cl+' &middot; '+fmtDate(t.due)+'</div>'+(isUrgent(t)?'<span class="rbadge">&#9200; '+daysLeft(t.due)+'</span>':'')+'</div><div style="display:flex;gap:4px;align-items:center"><span class="pill '+(t.pr==='high'?'p-rose':'p-amber')+'">'+(t.pr==='high'?'Alta':'Media')+'</span><button class="btn btn-light btn-xs" onclick="editTask('+t.id+')">✏️</button><button class="btn btn-rose btn-xs" onclick="delTask('+t.id+')">✕</button></div></div>';
+  }
+  if(otherC.length){
+    html+='<div class="shdr" style="margin-top:10px;color:var(--text3)">Proximas semanas</div>';
+    for(var i=0;i<otherC.length;i++){var t=otherC[i];html+='<div class="task" style="opacity:.7"><div class="tck '+(t.st==='done'?'done':'')+'" onclick="toggleTask('+t.id+')"></div><div style="flex:1"><div class="ttl">'+t.ttl+'</div><div class="tmt">'+t.cl+' &middot; '+fmtDate(t.due)+'</div></div><div style="display:flex;gap:4px;align-items:center"><span class="pill p-neutral">'+daysLeft(t.due)+'</span><button class="btn btn-light btn-xs" onclick="editTask('+t.id+')">✏️</button><button class="btn btn-rose btn-xs" onclick="delTask('+t.id+')">✕</button></div></div>';}
+  }
   html+='<div class="sep"></div>';
-  html+='<div class="shdr" style="color:var(--violet)">Estudio &mdash; Pendientes ('+sPend.length+')</div>';
-  if(!sPend.length)html+='<div style="font-size:11px;color:var(--text3);padding:8px 0">Sin tareas del estudio pendientes.</div>';
-  for(var i=0;i<sPend.length;i++){var t=sPend[i];html+='<div class="studio-task"><div class="tck '+(t.st==='done'?'done':'')+'" onclick="toggleStudioTask('+t.id+')"></div><div style="flex:1"><div class="ttl" style="color:var(--violet)">'+t.ttl+'</div><div class="tmt">'+t.cat+' &middot; '+fmtDate(t.due)+'</div></div><div style="display:flex;gap:4px;align-items:center"><span class="pill '+(t.pr==='high'?'p-rose':t.pr==='medium'?'p-amber':'p-neutral')+'">'+(t.pr==='high'?'Alta':'Media')+'</span><button class="btn btn-rose btn-xs" onclick="delStudioTask('+t.id+')">✕</button></div></div>';}
-  html+='</div>';
-  // Mini calendar on the right
-  html+='<div><div class="shdr">Calendario</div>'+rMiniCal()+'</div>';
-  html+='</div>';
-  html+='</div>';
+  html+='<div class="shdr" style="color:var(--violet)">Estudio &mdash; Esta semana</div>';
+  var thisWeekS=sPend.filter(function(t){return isThisWeek(t.due);});
+  var otherS=sPend.filter(function(t){return !isThisWeek(t.due);});
+  if(!thisWeekS.length&&!otherS.length)html+='<div style="font-size:11px;color:var(--text3);padding:8px 0">Sin tareas del estudio.</div>';
+  for(var i=0;i<thisWeekS.length;i++){var t=thisWeekS[i];html+='<div class="studio-task" style="background:var(--violet-bg);border-left:3px solid var(--violet)"><div class="tck '+(t.st==='done'?'done':'')+'" onclick="toggleStudioTask('+t.id+')"></div><div style="flex:1"><div class="ttl" style="color:var(--violet)">'+t.ttl+'</div><div class="tmt">'+t.cat+' &middot; '+fmtDate(t.due)+'</div></div><div style="display:flex;gap:4px"><span class="pill '+(t.pr==='high'?'p-rose':'p-amber')+'">'+(t.pr==='high'?'Alta':'Media')+'</span><button class="btn btn-rose btn-xs" onclick="delStudioTask('+t.id+')">✕</button></div></div>';}
+  if(otherS.length){html+='<div class="shdr" style="margin-top:8px;color:var(--text3)">Proximas semanas</div>';for(var i=0;i<otherS.length;i++){var t=otherS[i];html+='<div class="studio-task" style="opacity:.65"><div class="tck" onclick="toggleStudioTask('+t.id+')"></div><div style="flex:1"><div class="ttl" style="color:var(--text2)">'+t.ttl+'</div><div class="tmt">'+t.cat+'</div></div><button class="btn btn-rose btn-xs" onclick="delStudioTask('+t.id+')">✕</button></div>';}}
+  html+='</div></div></div>';
   return html;
 }
 
@@ -1596,15 +1611,15 @@ function rSchedule(){
     var it=(dateStr===TODAY);
     var ts=tByD[d]||[],ms=mByD[d]||[];
     var isCard=(d===22);
-    cells+='<div class="cal-d '+(it?'today':'')+'">';
-    cells+='<div class="cal-dn" style="font-weight:'+(it?600:400)+';color:'+(it?'var(--pink)':'inherit')+'">'+d+'</div>';
+    cells+='<div class="cal-d '+(it?'today':'')+'" style="'+(it?'background:var(--indigo-bg);':'')+ '">';
+    cells+='<div class="cal-dn">'+(it?'<span style="background:var(--indigo);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">'+d+'</span>':'<span>'+d+'</span>')+'</div>';
     if(isCard)cells+='<div class="cal-ev" style="background:var(--amber-bg);color:var(--text2);border:1px solid var(--amber-bd)" title="Pago mensual de tarjeta de credito">💳 Pagar tarjeta</div>';
     for(var j=0;j<ms.length;j++){
       var mtEv=ms[j];
       var shortTitle=mtEv.ttl.length>16?mtEv.ttl.substring(0,14)+'…':mtEv.ttl;
       var mtCl2=DB.clients.find(function(x){return x.co===mtEv.cl;});var mtBg=mtCl2?cc(mtCl2,1):(mtEv.type==='google'?'#e8f5e9':mtEv.type==='zoom'?'#eef4ff':'var(--violet-bg)');var mtFg=mtCl2?cc(mtCl2,0):(mtEv.type==='google'?'#00832d':mtEv.type==='zoom'?'#2D8CFF':'var(--violet)');cells+='<div class="cal-ev" onclick="editMeet('+mtEv.id+')" style="cursor:pointer;background:'+mtBg+';color:'+mtFg+'" title="'+mtEv.ttl+' · '+mtEv.time+(mtEv.desc?' — '+mtEv.desc:'')+' (click para editar)">📹 '+shortTitle+'</div>';
     }
-    for(var j=0;j<Math.min(2,ts.length);j++){
+    for(var j=0;j<ts.length;j++){
       var tEv=ts[j];var cl2=DB.clients.find(function(c){return c.co===tEv.cl;});
       var shortTtl=tEv.ttl.length>13?tEv.ttl.substring(0,12)+'…':tEv.ttl;
       cells+='<div class="cal-ev" onclick="editTask('+tEv.id+')" style="cursor:pointer;background:'+(cl2?cc(cl2,1):'var(--bg3)')+';color:'+(cl2?cc(cl2,0):'var(--text)')+'" title="'+tEv.ttl+' (click para editar)">'+shortTtl+'</div>';
@@ -1618,9 +1633,13 @@ function rSchedule(){
   html+='<div class="cal-big-h"><button class="btn btn-light btn-xs" onclick="prevMonth()">&larr;</button><div class="cal-big-t" style="text-align:center">'+mNames[m]+' '+y+'</div><button class="btn btn-light btn-xs" onclick="nextMonth()">&rarr;</button><button class="btn btn-light btn-xs" onclick="DB.calMonth=5;DB.calYear=2026;render()">Hoy</button></div>';
   html+='<div class="cal-big-g">'+['Dom','Lun','Mar','Mie','Jue','Vie','Sab'].map(function(d){return'<div class="cal-dow">'+d+'</div>';}).join('')+cells+'</div>';
   html+='</div>';
-  html+='<div class="shdr" style="margin-top:16px">Proximas reuniones</div>';
+  var sortedMeets=DB.meetings.slice().sort(function(a,b){return a.date>b.date?1:a.date<b.date?-1:a.time>b.time?1:-1;});
+  var upcomingM=sortedMeets.filter(function(m){return m.date>=TODAY;});
+  var pastM=sortedMeets.filter(function(m){return m.date<TODAY;});
+  html+='<div class="shdr" style="margin-top:16px">Proximas reuniones ('+upcomingM.length+')</div>';
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-  for(var i=0;i<DB.meetings.length;i++){
+  var meetsToShow=upcomingM.length?upcomingM:sortedMeets;
+  for(var i=0;i<meetsToShow.length;i++){var mt=meetsToShow[i];var isToday2=mt.date===TODAY;
     var mt=DB.meetings[i];
     html+='<div class="meet" style="flex-direction:column;gap:6px">';
     html+='<div style="display:flex;gap:10px;align-items:flex-start">';
@@ -1743,7 +1762,7 @@ function rFinance(){
   for(var bi=0;bi<badges.length;bi++)html+='<span style="background:'+badges[bi][1]+';border:1px solid rgba(255,255,255,.15);border-radius:20px;font-size:9.5px;padding:3px 10px">'+badges[bi][0]+'</span>';
   html+='</div></div>';
   html+='<div class="g3">';
-  html+='<div class="mc" style="background:#f2f3f5;border-color:#ced2dc"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+icn('invoice',18)+'<div class="mc-l" style="color:#4a6cf7;margin:0">Total pactado</div></div><div class="mc-v" style="color:#4a6cf7">$'+tB.toLocaleString()+'</div></div>';
+  html+='<div class="mc" style="background:#f2f3f5;border-color:#ced2dc"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+icn('invoice',18)+'<div class="mc-l" style="color:#4a6cf7;margin:0">Total pactado (suma de contratos)</div></div><div class="mc-v" style="color:#4a6cf7">$'+tB.toLocaleString()+'</div></div>';
   html+='<div class="mc" style="background:#eef0fd;border-color:#bfc9fc"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+icn('pay_ok',18)+'<div class="mc-l" style="color:#4a6cf7;margin:0">Total cobrado</div></div><div class="mc-v" style="color:#4a6cf7">$'+tP.toLocaleString()+'</div><div class="mc-s" style="color:#4a6cf7">'+Math.round(tP/tB*100)+'% del total</div></div>';
   html+='<div class="mc" style="background:#f3f4f6;border-color:#d1d5db"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+icn('pay_pending',18)+'<div class="mc-l" style="color:#5a5f72;margin:0">Por cobrar</div></div><div class="mc-v" style="color:#5a5f72">$'+tPend.toLocaleString()+'</div></div>';
   html+='</div>';
