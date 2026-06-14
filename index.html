@@ -154,6 +154,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .studio-task{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;background:var(--violet-bg);transition:border .12s}
 .studio-task:hover{border-color:var(--violet-bd)}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -373,7 +374,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -2087,13 +2088,17 @@ function saveNewPost(){
 // ── GMAIL INTEGRATION ──
 function saveGmailSettings(){
   var user=(document.getElementById('gm-user')||{}).value||'';
-  var pw=(document.getElementById('gm-pw')||{}).value||'';
-  if(!user||!pw){alert('Ingresa tu email y app password.');return;}
-  localStorage.setItem('studioGmailUser',user);
-  localStorage.setItem('studioGmailPw',pw);
-  DB.gmailUser=user;DB.gmailAppPw=pw;
+  var svcId=(document.getElementById('ejs-service')||{}).value||'';
+  var tplId=(document.getElementById('ejs-template')||{}).value||'';
+  var pubKey=(document.getElementById('ejs-pubkey')||{}).value||'';
+  if(user)localStorage.setItem('studioGmailUser',user);
+  if(svcId)localStorage.setItem('studioEjsService',svcId);
+  if(tplId)localStorage.setItem('studioEjsTemplate',tplId);
+  if(pubKey)localStorage.setItem('studioEjsPubkey',pubKey);
+  DB.gmailUser=user;
+  DB.emailjsServiceId=svcId;DB.emailjsTemplateId=tplId;DB.emailjsPublicKey=pubKey;
   var el=document.getElementById('gm-status');
-  if(el){el.textContent='Guardado correctamente.';el.style.color='var(--lime)';}
+  if(el){el.textContent='Guardado.';el.style.color='var(--indigo)';}
 }
 
 function clearGmailSettings(){
@@ -2103,23 +2108,27 @@ function clearGmailSettings(){
 }
 
 async function sendEmail(to,subject,body,saveAsDraft){
-  if(!DB.gmailUser||!DB.gmailAppPw){
-    // Fallback: open mailto
-    window.location.href='mailto:'+to+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-    return{success:true,mode:'mailto'};
+  // Try EmailJS if configured
+  if(DB.emailjsServiceId&&DB.emailjsTemplateId&&DB.emailjsPublicKey){
+    try{
+      emailjs.init({publicKey:DB.emailjsPublicKey});
+      var result=await emailjs.send(DB.emailjsServiceId,DB.emailjsTemplateId,{
+        to_email:to,
+        to_name:to.split('@')[0],
+        subject:subject,
+        message:body,
+        from_name:'Studio One — Sherine Salem',
+        reply_to:DB.gmailUser||'sherinesalems@gmail.com'
+      });
+      return{success:true,mode:'emailjs'};
+    }catch(e){
+      console.error('EmailJS error:',e);
+    }
   }
-  try{
-    var resp=await fetch('/api/send-email',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({gmailUser:DB.gmailUser,gmailAppPw:DB.gmailAppPw,to,subject,body,saveAsDraft})
-    });
-    return await resp.json();
-  }catch(e){
-    // Fallback to mailto if API not available
-    window.location.href='mailto:'+to+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-    return{success:true,mode:'mailto_fallback'};
-  }
+  // Fallback: open mailto in new tab (doesn't navigate away)
+  var mailtoUrl='mailto:'+to+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  window.open(mailtoUrl,'_blank');
+  return{success:true,mode:'mailto'};
 }
 
 function buildKickoffEmail(c,meeting){
@@ -2212,33 +2221,55 @@ async function saveDraftEmail(mtId){
 }
 // ── GMAIL SETTINGS PAGE ──
 function rGmailSettings(){
-  var connected=DB.gmailUser&&DB.gmailAppPw;
-  var html='<div class="topbar"><div><div class="tb-t">Gmail — Invitaciones y Drafts</div><div class="tb-s">Conecta tu Gmail para enviar invites y guardar borradores automaticamente</div></div></div>';
+  var connected=DB.emailjsServiceId&&DB.emailjsTemplateId&&DB.emailjsPublicKey;
+  var html='<div class="topbar"><div><div class="tb-t">Gmail — Invitaciones y Drafts</div><div class="tb-s">Conecta EmailJS para enviar emails automaticamente sin servidor</div></div></div>';
   html+='<div class="content">';
+
   if(connected){
-    html+='<div style="background:var(--lime-bg);border:1px solid var(--lime-bd);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px">';
-    html+='<div style="font-size:24px">✅</div><div><div style="font-size:13px;font-weight:600;color:var(--indigo)">Gmail conectado</div>';
-    html+='<div style="font-size:11px;color:var(--text2)">'+DB.gmailUser+'</div></div>';
-    html+='<button class="btn btn-rose btn-xs" style="margin-left:auto" onclick="clearGmailSettings()">Desconectar</button></div>';
+    html+='<div style="background:var(--indigo-bg);border:1px solid var(--indigo-bd);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">';
+    html+='<div style="font-size:24px">✅</div>';
+    html+='<div><div style="font-size:13px;font-weight:600;color:var(--indigo)">EmailJS conectado</div>';
+    html+='<div style="font-size:11px;color:var(--text2)">Los kick-off emails se envian directamente desde el dashboard</div></div>';
+    html+='<button class="btn btn-rose btn-xs" style="margin-left:auto" onclick="clearGmailSettings()">Desconectar</button>';
+    html+='</div>';
   }
-  html+='<div class="card" style="max-width:560px;margin-bottom:20px">';
-  html+='<div style="font-size:13px;font-weight:600;margin-bottom:4px">'+(connected?'Actualizar credenciales':'Conectar Gmail')+'</div>';
-  html+='<div style="font-size:10.5px;color:var(--text3);margin-bottom:14px;line-height:1.6">Ingresa tu Gmail y App Password. El App Password es distinto a tu contrasena normal de Google.</div>';
-  html+='<div class="fg"><label class="fl">Tu Gmail</label><input class="fi" id="gm-user" type="email" placeholder="tuemail@gmail.com" value="'+(DB.gmailUser||'')+'"/></div>';
-  html+='<div class="fg"><label class="fl">App Password (16 caracteres)</label><input class="fi" id="gm-pw" type="password" placeholder="xxxx xxxx xxxx xxxx" value="'+(DB.gmailAppPw||'')+'"/></div>';
-  html+='<div style="font-size:9.5px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg2);border-radius:7px;line-height:1.6">Para obtener tu App Password: <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--indigo)">myaccount.google.com/apppasswords</a> &rarr; Escribe un nombre &rarr; Create &rarr; Copia las 16 letras</div>';
+
+  // Setup steps
+  html+='<div class="card" style="max-width:600px;margin-bottom:20px">';
+  html+='<div style="font-size:13px;font-weight:600;margin-bottom:12px">Configurar EmailJS — 4 pasos (gratis)</div>';
+  var steps=[
+    ['1','Crear cuenta en EmailJS','Ve a <a href="https://emailjs.com" target="_blank" style="color:var(--indigo)">emailjs.com</a> y crea una cuenta gratuita (200 emails/mes gratis)'],
+    ['2','Conectar tu Gmail','En EmailJS: Email Services → Add New Service → Gmail → conecta tu cuenta sherinesalems@gmail.com'],
+    ['3','Crear template','En EmailJS: Email Templates → Create New Template. Usa estas variables:<br><code style="background:var(--bg2);padding:2px 6px;border-radius:4px;font-size:10px">{{to_email}} {{subject}} {{message}} {{from_name}}</code>'],
+    ['4','Copiar credenciales','En EmailJS: Account → API Keys. Copia Service ID, Template ID y Public Key, y pegaos abajo']
+  ];
+  for(var i=0;i<steps.length;i++){
+    html+='<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">';
+    html+='<div style="width:24px;height:24px;border-radius:50%;background:var(--indigo);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+steps[i][0]+'</div>';
+    html+='<div><div style="font-size:11.5px;font-weight:600;margin-bottom:2px">'+steps[i][1]+'</div>';
+    html+='<div style="font-size:10.5px;color:var(--text3);line-height:1.6">'+steps[i][2]+'</div></div></div>';
+  }
+  html+='</div>';
+
+  // Credentials form
+  html+='<div class="card" style="max-width:600px;margin-bottom:20px">';
+  html+='<div style="font-size:12px;font-weight:600;margin-bottom:12px">Credenciales EmailJS</div>';
+  html+='<div class="fg"><label class="fl">Tu Gmail (remitente)</label><input class="fi" id="gm-user" type="email" placeholder="sherinesalems@gmail.com" value="'+(DB.gmailUser||'')+'"/></div>';
+  html+='<div class="fg"><label class="fl">Service ID</label><input class="fi" id="ejs-service" placeholder="service_xxxxxxx" value="'+(DB.emailjsServiceId||'')+'"/></div>';
+  html+='<div class="fg"><label class="fl">Template ID</label><input class="fi" id="ejs-template" placeholder="template_xxxxxxx" value="'+(DB.emailjsTemplateId||'')+'"/></div>';
+  html+='<div class="fg"><label class="fl">Public Key</label><input class="fi" id="ejs-pubkey" placeholder="xxxxxxxxxxxxxxxxxxxxxx" value="'+(DB.emailjsPublicKey||'')+'"/></div>';
   html+='<button class="btn btn-dark btn-sm" onclick="saveGmailSettings()">Guardar y conectar</button> <span id="gm-status" style="font-size:10.5px"></span>';
   html+='</div>';
-  var steps=[['📅','Nuevo cliente','El sistema crea todas las reuniones en Agenda segun el paquete contratado'],['📧','Kick-off automatico','El primer email de bienvenida + link se envia AUTOMATICAMENTE al cliente'],['📝','Resto de reuniones — Drafts','Cada reunion genera un borrador en tu Gmail listo para revisar y enviar'],['✏️','Tu revisas y envias','Abres Drafts, personalizas y envias cuando estes lista']];
-  html+='<div class="card" style="max-width:560px;margin-bottom:20px"><div style="font-size:12px;font-weight:600;margin-bottom:10px">Como funciona</div>';
-  for(var i=0;i<steps.length;i++)html+='<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px"><div style="font-size:18px;width:26px;flex-shrink:0">'+steps[i][0]+'</div><div><div style="font-size:11.5px;font-weight:600;margin-bottom:2px">'+steps[i][1]+'</div><div style="font-size:10.5px;color:var(--text3)">'+steps[i][2]+'</div></div></div>';
-  html+='</div>';
+
+  // Client kickoff status
   var cwEmail=DB.clients.filter(function(c){return c.email;});
   if(cwEmail.length){
-    html+='<div class="shdr">Estado de kick-off emails</div>';
+    html+='<div class="shdr">Kick-off emails por cliente</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-    for(var i=0;i<cwEmail.length;i++){var c=cwEmail[i];
-      html+='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px">';
+    for(var i=0;i<cwEmail.length;i++){
+      var c=cwEmail[i];
+      var cAccent=cc(c,0);var cBg=cc(c,1);
+      html+='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;border-left:3px solid '+cAccent+'">';
       html+='<div style="font-size:11.5px;font-weight:600;margin-bottom:2px">'+c.co+'</div>';
       html+='<div style="font-size:10px;color:var(--text3);margin-bottom:8px">'+c.email+'</div>';
       html+=c.kickoffSent?'<span style="font-size:10px;color:var(--indigo);font-weight:600">✓ Kick-off enviado</span>':'<button id="kickoff-btn-'+c.id+'" class="btn btn-dark btn-xs" onclick="sendKickoffEmail('+c.id+')">📧 Enviar kick-off</button>';
@@ -2246,6 +2277,7 @@ function rGmailSettings(){
     }
     html+='</div>';
   }
+
   html+='</div>';
   return html;
 }
@@ -2654,11 +2686,16 @@ function loadFromStorage(){
     if(save.monthly)DB.monthly=save.monthly;
     if(save.studio)DB.studio=save.studio;
     if(save.tlExpand)DB.tlExpand=save.tlExpand;
-    // Load Gmail credentials from localStorage (separate key for security)
     var gUser=localStorage.getItem('studioGmailUser');
     var gPw=localStorage.getItem('studioGmailPw');
+    var ejsSvc=localStorage.getItem('studioEjsService');
+    var ejsTpl=localStorage.getItem('studioEjsTemplate');
+    var ejsPub=localStorage.getItem('studioEjsPubkey');
     if(gUser)DB.gmailUser=gUser;
     if(gPw)DB.gmailAppPw=gPw;
+    if(ejsSvc)DB.emailjsServiceId=ejsSvc;
+    if(ejsTpl)DB.emailjsTemplateId=ejsTpl;
+    if(ejsPub)DB.emailjsPublicKey=ejsPub;
     return true;
   }catch(e){console.warn('Load failed:',e);return false;}
 }
