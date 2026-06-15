@@ -407,10 +407,11 @@ function getCustomSteps(c){
 }
 
 function genMeetLink(){
-  // Generate a valid Google Meet room code (xxx-xxxx-xxx format)
-  var chars='abcdefghijkmnpqrstuvwxyz';
-  function seg(n){var s='';for(var i=0;i<n;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
-  return'https://meet.google.com/'+seg(3)+'-'+seg(4)+'-'+seg(3);
+  // Use meet.google.com/new — opens instantly, creates real room, no auth issues
+  // Add a unique hash so each meeting shows different in the agenda
+  var chars='abcdefghijkmnpqrstuvwxyz23456789';
+  var hash='';for(var i=0;i<6;i++)hash+=chars[Math.floor(Math.random()*chars.length)];
+  return'https://meet.google.com/new?hs='+hash;
 }
 function genZoomLink(){
   // Generate a Zoom meeting number
@@ -991,7 +992,7 @@ function rTasks(){
   html+='<div style="display:flex;height:100%;overflow:hidden">';
 
   // LEFT: calendar — fixed 340px
-  html+='<div style="width:340px;flex-shrink:0;border-right:1px solid var(--border);padding:16px;overflow-y:auto;background:#fff">';
+  html+='<div style="width:55%;flex-shrink:0;border-right:1px solid var(--border);padding:16px;overflow-y:auto;background:#fff">';
   html+='<div class="shdr" style="margin-bottom:8px">Calendario</div>';
   html+=rMiniCal();
   html+='</div>';
@@ -1067,7 +1068,7 @@ function rMiniCal(){
     if(d.getMonth()===m&&d.getFullYear()===y){var k=d.getDate();if(!mByD[k])mByD[k]=[];mByD[k].push(mt);}
   });
   var cells='';
-  for(var i=0;i<fd;i++)cells+='<div style="min-height:52px;border-right:.5px solid var(--border);border-bottom:.5px solid var(--border);background:var(--bg2)"></div>';
+  for(var i=0;i<fd;i++)cells+='<div style="min-height:80px;border-right:.5px solid var(--border);border-bottom:.5px solid var(--border);background:var(--bg2)"></div>';
   for(var d=1;d<=dm;d++){
     var dateStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(d<10?'0':'')+d;
     var it=(dateStr===TODAY);
@@ -1080,7 +1081,7 @@ function rMiniCal(){
     cells+='</div>';
   }
   var remaining=(7-(dm+fd)%7)%7;
-  for(var i=0;i<remaining;i++)cells+='<div style="min-height:52px;border-right:.5px solid var(--border);border-bottom:.5px solid var(--border);background:var(--bg2)"></div>';
+  for(var i=0;i<remaining;i++)cells+='<div style="min-height:80px;border-right:.5px solid var(--border);border-bottom:.5px solid var(--border);background:var(--bg2)"></div>';
   return '<div style="background:#fff;border:1px solid var(--border);border-radius:11px;overflow:hidden">'
     +'<div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">'
     +'<button onclick="DB.calMonth=DB.calMonth>0?DB.calMonth-1:11;if(DB.calMonth===11)DB.calYear--;render()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:0 4px">&larr;</button>'
