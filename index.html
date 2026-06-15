@@ -755,7 +755,7 @@ function rStudio(){
     html+='<div class="post-c" style="background:var(--violet-bg);border:1px solid var(--violet-bd);border-radius:9px;margin-bottom:7px;padding:10px 12px">';
     html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><div style="width:22px;height:22px;border-radius:6px;background:'+pi.bg+';display:flex;align-items:center;justify-content:center">'+icn(pi.ic,14)+'</div><span style="font-size:10.5px;font-weight:500;color:var(--violet);text-transform:capitalize">'+(p.pl==='twitter'?'Twitter/X':p.pl)+'</span><span class="pill '+(fmtColors[p.fmt]||'p-neutral')+'" style="text-transform:capitalize">'+p.fmt+'</span><span class="pill '+(p.st==='scheduled'?'p-lime':'p-amber')+'" style="margin-left:auto">'+(p.st==='scheduled'?'Prog.':'Borrador')+'</span><button onclick="delPost('+p.id+')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);padding:2px 4px;margin-left:4px" title="Eliminar post">&#10005;</button></div>';
     html+='<div class="pcap">'+p.cap+'</div>';
-    html+='<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-family:var(--mono);font-size:9px;color:var(--text3)">'+fmtDate(p.date)+' &middot; '+p.time+'</div><button class="btn btn-light btn-xs" onclick="editPost('+p.id+')">✏️ Editar</button></div>';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--text3)">'+fmtDate(p.date)+' &middot; '+p.time+'</div><div style="display:flex;gap:4px"><button id="copy-btn-'+p.id+'" class="btn btn-light btn-xs" onclick="copyCaption('+p.id+')">📋 Copiar</button><button class="btn btn-light btn-xs" style="background:#1d9bf0;color:#fff;border-color:#1d9bf0" onclick="openInBuffer('+p.id+')">▶ Buffer</button><button class="btn btn-light btn-xs" onclick="editPost('+p.id+')">✏️</button></div></div>';
     html+='</div>';
   }
   html+='</div>';
@@ -1920,7 +1920,12 @@ function rSocial(){
       html+='<div style="font-size:11.5px;color:var(--text);line-height:1.6;margin-bottom:10px;max-height:80px;overflow:hidden">'+p.cap+'</div>';
       html+='<div style="display:flex;align-items:center;gap:10px">';
       html+='<div style="font-family:var(--mono);font-size:10px;color:var(--text3)">📅 '+fmtDate(p.date)+' &middot; '+p.time+'</div>';
-      html+='<div style="margin-left:auto;display:flex;gap:5px"><button class="btn btn-light btn-xs" onclick="editPost('+p.id+')">✏️ Editar</button><button onclick="delPost('+p.id+')" class="btn btn-rose btn-xs">✕</button></div>';
+      html+='<div style="margin-left:auto;display:flex;gap:5px">';
+      html+='<button id="copy-btn-'+p.id+'" class="btn btn-light btn-xs" onclick="copyCaption('+p.id+')">📋 Copiar</button>';
+      html+='<button class="btn btn-light btn-xs" style="background:#1d9bf0;color:#fff;border-color:#1d9bf0" onclick="openInBuffer('+p.id+')">▶ Buffer</button>';
+      html+='<button class="btn btn-light btn-xs" onclick="editPost('+p.id+')">✏️ Editar</button>';
+      html+='<button onclick="delPost('+p.id+')" class="btn btn-rose btn-xs">✕</button>';
+      html+='</div>';
       html+='</div></div>';
       // Right — platform mockup preview
       html+='<div style="width:220px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);padding:10px;display:flex;flex-direction:column">';
@@ -2281,6 +2286,22 @@ function rGmailSettings(){
 
   html+='</div>';
   return html;
+}
+function openInBuffer(postId){
+  var p=DB.posts.find(function(x){return x.id===postId;});
+  if(!p)return;
+  // Buffer's new post URL with text pre-filled
+  var text=p.cap||'';
+  var url='https://publish.buffer.com/profile/new-post?text='+encodeURIComponent(text);
+  window.open(url,'_blank');
+}
+function copyCaption(postId){
+  var p=DB.posts.find(function(x){return x.id===postId;});
+  if(!p)return;
+  navigator.clipboard.writeText(p.cap||'').then(function(){
+    var btn=document.getElementById('copy-btn-'+postId);
+    if(btn){btn.textContent='Copiado!';setTimeout(function(){btn.textContent='📋 Copiar';},2000);}
+  });
 }
 function rBuffer(){
   var connected=DB.bufferConnected||false;
