@@ -407,16 +407,15 @@ function getCustomSteps(c){
 }
 
 function genMeetLink(){
-  // Use meet.google.com/new — opens instantly, creates real room, no auth issues
-  // Add a unique hash so each meeting shows different in the agenda
-  var chars='abcdefghijkmnpqrstuvwxyz23456789';
-  var hash='';for(var i=0;i<6;i++)hash+=chars[Math.floor(Math.random()*chars.length)];
-  return'https://meet.google.com/new?hs='+hash;
+  // Generate proper Google Meet room code: 3-4-3 lowercase letters
+  var c='abcdefghijkmnopqrstuvwxyz';
+  function seg(n){var s='';for(var i=0;i<n;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+  return'https://meet.google.com/'+seg(3)+'-'+seg(4)+'-'+seg(3);
 }
 function genZoomLink(){
-  // Generate a Zoom meeting number
+  // Valid Zoom personal meeting format
   var num='';for(var i=0;i<10;i++)num+=Math.floor(Math.random()*10);
-  return'https://zoom.us/j/'+num;
+  return'https://zoom.us/j/'+num+'?pwd=studioone';
 }
 function genMeetingLink(platform){
   return platform==='zoom'?genZoomLink():genMeetLink();
