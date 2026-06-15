@@ -1704,8 +1704,15 @@ function rSchedule(){
     html+='</div>';
     html+='<div style="display:flex;gap:5px;align-items:center;padding-top:6px;border-top:1px solid var(--border);flex-wrap:wrap">';
     if(mt.link)html+='<a href="'+mt.link+'" target="_blank" class="btn btn-light btn-xs">🔗 Unirse</a>';
-    if(mt.inviteUrl&&mt.clientEmail)html+='<a href="'+mt.inviteUrl+'" class="btn btn-light btn-xs">📧 Invite</a>';
-    if(mt.clientEmail&&DB.gmailAppPw)html+='<button class="btn btn-light btn-xs" onclick="saveDraftEmail('+mt.id+')">📝 Draft</button><span id="draft-status-'+mt.id+'" style="font-size:9px;color:var(--indigo)"></span>';
+    if(mt.clientEmail){
+      if(mt.inviteSent){
+        html+='<span style="font-size:9.5px;color:var(--indigo);font-weight:600;padding:3px 8px;background:var(--indigo-bg);border:1px solid var(--indigo-bd);border-radius:5px">✓ Invite enviado '+fmtShort(mt.inviteSentDate)+'</span>';
+        html+='<button class="btn btn-light btn-xs" onclick="mt_'+mt.id+'_resend()" style="font-size:9px" onclick="DB.meetings.find(function(m){return m.id==='+mt.id+';}).inviteSent=false;render()">Reenviar</button>';
+      } else {
+        html+='<button id="draft-btn-'+mt.id+'" class="btn btn-light btn-xs" onclick="saveDraftEmail('+mt.id+')">📧 Invite</button>';
+      }
+    }
+    if(mt.inviteUrl&&mt.clientEmail&&!mt.inviteSent)html+='<a href="'+mt.inviteUrl+'" class="btn btn-light btn-xs">✉ Mailto</a>';
     html+='<button class="btn btn-light btn-xs" onclick="editMeet('+mt.id+')">✏️ Editar</button>';
     html+='<button class="btn btn-rose btn-xs" onclick="delMeet('+mt.id+')">✕</button>';
     html+='</div></div>';
@@ -2216,12 +2223,16 @@ async function saveDraftEmail(mtId){
     +(mt.desc?'Agenda: '+mt.desc+'\n\n':'')
     +'Por favor confirma tu asistencia respondiendo este correo.\n\n'
     +'Saludos,\nSherine Salem\nGraphic Designer\n+51 941 392 581\nhttps://www.sherinesalemscander.com/';
-  var result=await sendEmail(mt.clientEmail,subject,body,true);
-  var statusEl=document.getElementById('draft-status-'+mtId);
-  if(statusEl){
-    if(result&&result.mode==='draft')statusEl.textContent='Guardado en Drafts';
-    else if(result&&result.mode==='mailto'||result&&result.mode==='mailto_fallback')statusEl.textContent='Abierto en Gmail';
-    else statusEl.textContent='Error';
+  var btn=document.getElementById('draft-btn-'+mtId);
+  if(btn){btn.textContent='Enviando...';btn.disabled=true;}
+  var result=await sendEmail(mt.clientEmail,subject,body,false);
+  if(result&&result.success){
+    mt.inviteSent=true;
+    mt.inviteSentDate=TODAY;
+    saveToStorage();
+    render();
+  } else {
+    if(btn){btn.textContent='📧 Invite';btn.disabled=false;}
   }
 }
 // ── GMAIL SETTINGS PAGE ──
