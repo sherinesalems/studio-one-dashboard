@@ -2385,9 +2385,21 @@ function rBuffer(){
     }
     html+='</div>';
 
+    // ── Make Webhook ──
+    html+='<div class="card" id="make-setup-card" style="margin-bottom:12px">';
+    html+='<div style="font-size:12px;font-weight:600;margin-bottom:4px">🔗 Conectar Make (recomendado — gratis)</div>';
+    html+='<div style="font-size:10.5px;color:var(--text3);margin-bottom:12px;line-height:1.6">Publica directo a Instagram y LinkedIn desde el dashboard sin salir. Usa Make.com gratis (1,000 ops/mes).</div>';
+    html+='<div style="margin-bottom:10px"><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Make Webhook URL</label>';
+    html+='<input id="make-webhook" type="text" placeholder="https://hook.us2.make.com/xxxxxxxxxxxxxxxx" style="width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:11px;outline:none;color:var(--text)" value="'+(DB.makeWebhookUrl||'')+'"/>';
+    html+='<div style="font-size:9.5px;color:var(--text3);margin-top:5px">La URL viene de Make.com → tu escenario → Custom Webhook. Se guarda localmente.</div></div>';
+    html+='<button class="btn btn-dark btn-sm" onclick="saveMakeWebhook()">'+(DB.makeWebhookUrl?'✓ Webhook guardado — actualizar':'Conectar Make')+'</button>';
+    html+='<span id="make-status" style="font-size:10.5px;color:var(--indigo);margin-left:8px">'+(DB.makeWebhookUrl?'Conectado':'')+'</span>';
+    html+='</div>';
+
     // ── Token input ──
     html+='<div class="card" id="buffer-setup-card">';
-    html+='<div style="font-size:12px;font-weight:600;margin-bottom:10px">Conectar con Access Token</div>';
+    html+='<div style="font-size:12px;font-weight:600;margin-bottom:4px">Buffer Access Token (opcional)</div>';
+    html+='<div style="font-size:10.5px;color:var(--text3);margin-bottom:10px">Alternativa a Make. Requiere plan Team de Buffer ($10/mes).</div>';
     html+='<div style="margin-bottom:10px"><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Buffer Access Token</label>';
     html+='<input id="buffer-token" type="password" placeholder="1/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:12px;outline:none;color:var(--text)"/>';
     html+='<div style="font-size:9.5px;color:var(--text3);margin-top:5px">Tu token se guarda localmente en tu navegador. Nunca se envia a ningun servidor externo.</div></div>';
