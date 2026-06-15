@@ -374,7 +374,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -1922,7 +1922,7 @@ function rSocial(){
       html+='<div style="font-family:var(--mono);font-size:10px;color:var(--text3)">📅 '+fmtDate(p.date)+' &middot; '+p.time+'</div>';
       html+='<div style="margin-left:auto;display:flex;gap:5px">';
       html+='<button id="copy-btn-'+p.id+'" class="btn btn-light btn-xs" onclick="copyCaption('+p.id+')">📋 Copiar</button>';
-      html+='<button class="btn btn-light btn-xs" style="background:#1d9bf0;color:#fff;border-color:#1d9bf0" onclick="openInBuffer('+p.id+')">▶ Buffer</button>';
+      html+=(DB.makeWebhookUrl?'<button id="make-btn-'+p.id+'" class="btn btn-light btn-xs" style="background:var(--indigo);color:#fff;border-color:var(--indigo)" onclick="sendToMake('+p.id+')">▶ '+(p.sentToMake?'✓ Enviado':'Make')+'</button>':'<button class="btn btn-light btn-xs" style="background:#1d9bf0;color:#fff;border-color:#1d9bf0" onclick="openInBuffer('+p.id+')">▶ Buffer</button>');
       html+='<button class="btn btn-light btn-xs" onclick="editPost('+p.id+')">✏️ Editar</button>';
       html+='<button onclick="delPost('+p.id+')" class="btn btn-rose btn-xs">✕</button>';
       html+='</div>';
@@ -2286,6 +2286,52 @@ function rGmailSettings(){
 
   html+='</div>';
   return html;
+}
+async function sendToMake(postId){
+  var p=DB.posts.find(function(x){return x.id===postId;});
+  if(!p){alert('Post no encontrado.');return;}
+  if(!DB.makeWebhookUrl){
+    alert('Configura tu webhook de Make primero en Buffer / Redes.');
+    nav('buffer');return;
+  }
+  var btn=document.getElementById('make-btn-'+postId);
+  if(btn){btn.textContent='Enviando...';btn.disabled=true;}
+  try{
+    var resp=await fetch(DB.makeWebhookUrl,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        caption:p.cap,
+        platform:p.pl,
+        format:p.fmt,
+        imageUrl:p.img||'',
+        date:p.date,
+        time:p.time,
+        status:p.st,
+        dashboardId:p.id
+      })
+    });
+    if(resp.ok||resp.status===200){
+      if(btn){btn.textContent='✓ Enviado a Make';btn.style.background='var(--indigo)';btn.style.color='#fff';}
+      p.sentToMake=true;
+      setTimeout(function(){render();},2000);
+    } else {
+      throw new Error('Status '+resp.status);
+    }
+  }catch(e){
+    if(btn){btn.textContent='▶ Make';btn.disabled=false;}
+    // Fallback to Buffer
+    openInBuffer(postId);
+  }
+}
+function saveMakeWebhook(){
+  var url=(document.getElementById('make-webhook')||{}).value||'';
+  if(!url){alert('Ingresa la URL del webhook.');return;}
+  localStorage.setItem('studioMakeWebhook',url);
+  DB.makeWebhookUrl=url;
+  var el=document.getElementById('make-status');
+  if(el){el.textContent='Webhook guardado.';el.style.color='var(--indigo)';}
+  render();
 }
 function openInBuffer(postId){
   var p=DB.posts.find(function(x){return x.id===postId;});
@@ -2718,6 +2764,8 @@ function loadFromStorage(){
     if(ejsSvc)DB.emailjsServiceId=ejsSvc;
     if(ejsTpl)DB.emailjsTemplateId=ejsTpl;
     if(ejsPub)DB.emailjsPublicKey=ejsPub;
+    var mwh=localStorage.getItem('studioMakeWebhook');
+    if(mwh)DB.makeWebhookUrl=mwh;
     return true;
   }catch(e){console.warn('Load failed:',e);return false;}
 }
