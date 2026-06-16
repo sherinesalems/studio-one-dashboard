@@ -2134,9 +2134,9 @@ function rFinance(){
     html+='<div style="font-family:var(--mono);font-size:11px;font-weight:500">'+m.m+'</div>';
     html+='<div style="font-family:var(--mono);font-size:10px;color:var(--violet)">$'+pact.toLocaleString()+'</div>';
     html+='<div><div style="height:7px;border-radius:4px;background:var(--bg3)"><div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#4a6cf7,#7c3aed);border-radius:4px"></div></div></div>';
-    html+='<div style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--sky)">$'+m.rev.toLocaleString()+'</div>';
+    html+='<div style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--sky);display:flex;flex-direction:column;align-items:flex-end"><span>$'+m.rev.toLocaleString()+'</span>'+(m.rev?'<span style="font-size:8.5px;color:var(--text3)">S/'+pen(m.rev)+'</span>':'')+'</div>';
     html+='<div style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--orange)">$'+m.exp.toLocaleString()+'</div>';
-    html+='<div style="text-align:right;font-family:var(--mono);font-size:10.5px;font-weight:600;color:'+(net>0?'var(--lime)':'var(--rose)')+'">$'+net.toLocaleString()+'</div></div>';
+    html+='<div style="text-align:right;font-family:var(--mono);font-size:10.5px;font-weight:600;color:'+(net>0?'var(--lime)':'var(--rose)')+';display:flex;flex-direction:column;align-items:flex-end"><span>$'+net.toLocaleString()+'</span>'+(net?'<span style="font-size:8.5px;color:var(--text3)">S/'+pen(net)+'</span>':'')+'</div></div>';
   }
   html+='<div style="display:grid;grid-template-columns:52px 80px 1fr 60px 60px 60px;gap:6px;padding-top:7px;border-top:1px solid var(--border2);font-size:11.5px;font-weight:600"><span style="color:var(--text3)">TOTAL</span><span></span><span></span><span style="text-align:right;font-family:var(--mono);color:var(--sky)">$'+tRev.toLocaleString()+'</span><span style="text-align:right;font-family:var(--mono);color:var(--orange)">$'+tExp.toLocaleString()+'</span><span style="text-align:right;font-family:var(--mono);color:'+(tNet>0?'var(--lime)':'var(--rose)')+'">$'+tNet.toLocaleString()+'</span></div>';
   html+='</div>';
@@ -3066,6 +3066,11 @@ function saveClient(){
   };
   DB.clients.push(newClient);
   if(sd)addAutoMeetings(newClient);
+  // Auto-add budget to current month revenue
+  var startM2=sd?new Date(sd+'T12:00').getMonth():new Date(TODAY).getMonth();
+  var mNamesAI=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var mEntryAI=DB.monthly.find(function(m){return m.m===mNamesAI[startM2];});
+  if(mEntryAI)mEntryAI.rev+=bg;
   closeM();buildNav();render();
 }
 
