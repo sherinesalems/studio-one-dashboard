@@ -380,7 +380,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -1883,6 +1883,10 @@ function rSchedule(){
   (DB.notes||[]).forEach(function(n){
     addEv(n.date,{type:'note',id:n.id,ttl:n.ttl,time:n.time||'',cl:'',done:false});
   });
+  // Personal tasks
+  (DB.personalTasks||[]).forEach(function(t){
+    addEv(t.date,{type:'personal',id:t.id,ttl:t.ttl,time:t.time||'',cl:'',done:t.done,pr:t.pr});
+  });
   // Peru holidays
   PERU_HOLIDAYS.forEach(function(h){
     addEv(h.date,{type:'holiday',id:'h_'+h.date,ttl:h.emoji+' '+h.name,time:'',cl:'',done:false});
@@ -1908,15 +1912,15 @@ function rSchedule(){
     for(var j=0;j<evs.length;j++){
       var ev=evs[j];
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?cc(cl,1):'var(--indigo-bg)'):ev.type==='note'?'#fbbf24':ev.type==='task'?'#f3f4f6':cl?cc(cl,1):'var(--indigo-bg)';
-      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?cc(cl,0):'var(--indigo)'):ev.type==='note'?'#fff':ev.type==='task'?'#374151':cl?cc(cl,0):'var(--indigo)';
+      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?cc(cl,1):'var(--indigo-bg)'):ev.type==='note'?'#fbbf24':ev.type==='personal'?'#fef3c7':ev.type==='task'?'#f3f4f6':cl?cc(cl,1):'var(--indigo-bg)';
+      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?cc(cl,0):'var(--indigo)'):ev.type==='note'?'#fff':ev.type==='personal'?'#000':ev.type==='task'?'#374151':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
-      var evBg2=isHoliday?'#f1f1f1':isBday?'#4a6cf7':evBg;
-      var evFg2=isHoliday?'#374151':isBday?'#fff':evFg;
-      var evBorder=isHoliday?'1px solid #d1d5db':isBday?'1px solid #4a6cf7':'none';
+      var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':evBg;
+      var evFg2=isHoliday?'#9ca3af':isBday?'#fff':evFg;
+      var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':'none';
       var shortTtl=ev.ttl.length>14?ev.ttl.substring(0,13)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'':ev.type==='holiday'?'':'editTask('+ev.id+')';
-      cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isHoliday||isBday?'600':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
+      cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday?'600':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
     }
     cells+='<div class="cal-add" onclick="event.stopPropagation();openAgendaModal(\''+dateStr+'\')">+</div>';
     cells+='</div>';
@@ -1933,10 +1937,12 @@ function rSchedule(){
   html+='</div>';
 
   // Legend
-  html+='<div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;padding:8px 0">';
+  html+='<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;padding:8px 0">';
   html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:var(--indigo)"></div>Reunión</div>';
-  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#374151"></div>Tarea</div>';
+  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#374151"></div>Tarea cliente</div>';
+  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#fef3c7;border:1px solid #fde68a"></div>Personal ⭐</div>';
   html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#fbbf24"></div>Nota</div>';
+  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="font-size:10px;color:#9ca3af">Feriado</div></div>';
   html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#16a34a"></div>Completado</div>';
   html+='</div>';
   html+='</div>';
@@ -1959,7 +1965,7 @@ function rSchedule(){
       var accent=cl?cc(cl,0):ev.type==='note'?'#d97706':'var(--indigo)';
       html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
       html+='<div style="display:flex;align-items:flex-start;gap:6px">';
-      var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':'Tarea';
+      var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':ev.type==='personal'?'Personal':'Tarea';
       var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'#4a6cf7':ev.type==='note'?'#d97706':'var(--text2)';
       html+='<div style="font-size:9px;background:'+typeBg+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+typeLabel+'</div>';
       html+='<div style="flex:1">';
@@ -1969,8 +1975,8 @@ function rSchedule(){
       html+='</div>';
       html+='<div style="display:flex;gap:3px;flex-shrink:0">';
       if(ev.type==='task')html+='<button class="btn btn-light btn-xs" onclick="toggleTask('+ev.id+')">'+(ev.done?'↩':'✓')+'</button>';
-      var editFn=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='holiday'?'':('editTask('+ev.id+')');
-      var delFn=ev.type==='meet'?'delMeet('+ev.id+')':ev.type==='note'?'delNote('+ev.id+')':ev.type==='birthday'?'delBirthday('+ev.id+')':ev.type==='holiday'?'':('delTask('+ev.id+')');
+      var editFn=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='personal'?'editPersonalTask('+ev.id+')':ev.type==='holiday'?'':('editTask('+ev.id+')');
+      var delFn=ev.type==='meet'?'delMeet('+ev.id+')':ev.type==='note'?'delNote('+ev.id+')':ev.type==='birthday'?'delBirthday('+ev.id+')':ev.type==='personal'?'delPersonalTask('+ev.id+')':ev.type==='holiday'?'':('delTask('+ev.id+')');
       if(editFn)html+='<button class="btn btn-light btn-xs" onclick="'+editFn+'">✏️</button>';
       if(delFn)html+='<button class="btn btn-rose btn-xs" onclick="'+delFn+'">✕</button>';
       html+='</div>';
@@ -3125,7 +3131,7 @@ function saveToStorage(){
     var save={
       clients:DB.clients,potentials:DB.potentials,tasks:DB.tasks,
       meetings:DB.meetings,posts:DB.posts,monthly:DB.monthly,
-      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[]
+      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[],personalTasks:DB.personalTasks||[]
     };
     localStorage.setItem('studioOS_v1',JSON.stringify(save));
   }catch(e){console.warn('Save failed:',e);}
@@ -3192,6 +3198,7 @@ function loadFromStorage(){
     if(save.tlExpand)DB.tlExpand=save.tlExpand;
     if(save.notes)DB.notes=save.notes;
     if(save.birthdays)DB.birthdays=save.birthdays;
+    if(save.personalTasks)DB.personalTasks=save.personalTasks;
     var gUser=localStorage.getItem('studioGmailUser');
     var gPw=localStorage.getItem('studioGmailPw');
     var ejsSvc=localStorage.getItem('studioEjsService');
@@ -3350,6 +3357,56 @@ function getBirthdaysForDate(dateStr){
   });
 }
 
+function openPersonalTaskModal(dateStr){
+  showModal(
+    '<h3>Tarea personal</h3>'+
+    fg('Titulo','pt2-ttl','Ej. Ir al gym, leer libro...','')+
+    '<div class="fg"><label class="fl">Fecha</label><input class="fi" id="pt2-dt" type="date" value="'+(dateStr||TODAY)+'"/></div>'+
+    fg('Hora (opcional)','pt2-tm','','time')+
+    fsel('Prioridad','pt2-pr',[['high','Alta'],['medium','Media'],['low','Baja']])+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="savePersonalTask()">Guardar</button></div>'
+  );
+}
+function savePersonalTask(){
+  var ttl=(document.getElementById('pt2-ttl')||{}).value||'';
+  var dt=(document.getElementById('pt2-dt')||{}).value||TODAY;
+  var tm=(document.getElementById('pt2-tm')||{}).value||'';
+  var pr=(document.getElementById('pt2-pr')||{}).value||'medium';
+  if(!ttl){alert('Agrega un titulo.');return;}
+  if(!DB.personalTasks)DB.personalTasks=[];
+  DB.personalTasks.push({id:Date.now(),ttl:ttl,date:dt,time:tm,pr:pr,done:false});
+  closeM();saveToStorage();render();
+}
+function togglePersonalTask(id){
+  var t=(DB.personalTasks||[]).find(function(x){return x.id===id;});
+  if(!t)return;t.done=!t.done;saveToStorage();render();
+}
+function delPersonalTask(id){
+  DB.personalTasks=(DB.personalTasks||[]).filter(function(x){return x.id!==id;});
+  saveToStorage();render();
+}
+function editPersonalTask(id){
+  var t=(DB.personalTasks||[]).find(function(x){return x.id===id;});
+  if(!t)return;
+  showModal(
+    '<h3>Editar tarea personal</h3>'+
+    '<div class="fg"><label class="fl">Titulo</label><input class="fi" id="ept-ttl" value="'+t.ttl.replace(/"/g,'&quot;')+'"/></div>'+
+    '<div class="fg"><label class="fl">Fecha</label><input class="fi" id="ept-dt" type="date" value="'+t.date+'"/></div>'+
+    '<div class="fg"><label class="fl">Hora</label><input class="fi" id="ept-tm" type="time" value="'+(t.time||'')+'"/></div>'+
+    fsel('Prioridad','ept-pr',[['high','Alta'],['medium','Media'],['low','Baja']])+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-rose btn-xs" onclick="delPersonalTask('+id+');closeM()">Eliminar</button><button class="btn btn-dark btn-sm" onclick="savePersonalTaskEdit('+id+')">Guardar</button></div>'
+  );
+  setTimeout(function(){var el=document.getElementById('ept-pr');if(el)el.value=t.pr||'medium';},0);
+}
+function savePersonalTaskEdit(id){
+  var t=(DB.personalTasks||[]).find(function(x){return x.id===id;});
+  if(!t)return;
+  t.ttl=document.getElementById('ept-ttl').value||t.ttl;
+  t.date=document.getElementById('ept-dt').value||t.date;
+  t.time=document.getElementById('ept-tm').value||'';
+  t.pr=document.getElementById('ept-pr').value||t.pr;
+  closeM();saveToStorage();render();
+}
 function openBirthdayModal(dateStr){
   showModal(
     '<h3>🎂 Agregar cumpleaños</h3>'+
@@ -3400,6 +3457,7 @@ function openAgendaModal(dateStr){
     '<button onclick="closeM();openTaskModalDate(\''+dateStr+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">✅</div><div style="font-size:11px;font-weight:700;color:var(--text)">Tarea</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Pendiente o recordatorio</div></button>'+
     '<button onclick="closeM();openNoteModal(\''+dateStr+'\')" style="background:var(--amber-bg);border:1.5px solid var(--amber-bd);border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">📝</div><div style="font-size:11px;font-weight:700;color:#92400e">Nota</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Apunte o recordatorio libre</div></button>'+
     '<button onclick="closeM();openBirthdayModal(\''+dateStr+'\')" style="background:#fdf2f8;border:1.5px solid #fad1e8;border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">🎂</div><div style="font-size:11px;font-weight:700;color:#be185d">Cumpleaños</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Agregar fecha especial</div></button>'+
+    '<button onclick="closeM();openPersonalTaskModal(\''+dateStr+'\')" style="background:#fef9ee;border:1.5px solid #fde68a;border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">⭐</div><div style="font-size:11px;font-weight:700;color:#92400e">Tarea personal</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Intereses propios</div></button>'+
     '</div>'+
     '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button></div>'
   );
