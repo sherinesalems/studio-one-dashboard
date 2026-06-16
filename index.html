@@ -157,9 +157,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .studio-task{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;background:var(--violet-bg);transition:border .12s}
 .studio-task:hover{border-color:var(--violet-bd)}
 
-.pen-tip{position:relative;cursor:help;border-bottom:1px dashed rgba(74,108,247,.5);display:inline}
-.pen-tip .pen-bubble{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1d2e;color:#fff;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;white-space:nowrap;z-index:9999;font-family:var(--mono);box-shadow:0 2px 12px rgba(0,0,0,.4);pointer-events:none}
-.pen-tip:hover .pen-bubble{display:block}
+/* pen-tip removed */
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
@@ -591,8 +589,7 @@ function pen(usd){
 function wrapPen(h,usd){
   if(!usd||isNaN(usd)||usd===0)return h;
   var soles=pen(usd);
-  var label='S/ '+soles+' soles';
-  return'<span class="pen-tip" title="'+label+'">'+h+'<span class="pen-bubble">'+label+'</span></span>';
+  return h+'<span style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-left:4px;font-weight:400">S/'+soles+'</span>';
 }
 function fmtDate(s){return new Date(s+'T12:00').toLocaleDateString('es-PE',{day:'numeric',month:'short'});}
 function fmtShort(d){return(d.getDate())+' '+([ 'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]);}
@@ -1846,8 +1843,10 @@ function rSchedule(){
       html+='</div>';
       html+='<div style="display:flex;gap:3px;flex-shrink:0">';
       if(ev.type==='task')html+='<button class="btn btn-light btn-xs" onclick="toggleTask('+ev.id+')">'+(ev.done?'↩':'✓')+'</button>';
-      html+='<button class="btn btn-light btn-xs" onclick="'+(ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':'editTask('+ev.id+')')+'">✏️</button>';
-      html+='<button class="btn btn-rose btn-xs" onclick="'+(ev.type==='meet'?'delMeet('+ev.id+')':ev.type==='note'?'delNote('+ev.id+')':'delTask('+ev.id+')')+'">✕</button>';
+      var editFn=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='holiday'?'':('editTask('+ev.id+')');
+      var delFn=ev.type==='meet'?'delMeet('+ev.id+')':ev.type==='note'?'delNote('+ev.id+')':ev.type==='birthday'?'delBirthday('+ev.id+')':ev.type==='holiday'?'':('delTask('+ev.id+')');
+      if(editFn)html+='<button class="btn btn-light btn-xs" onclick="'+editFn+'">✏️</button>';
+      if(delFn)html+='<button class="btn btn-rose btn-xs" onclick="'+delFn+'">✕</button>';
       html+='</div>';
       html+='</div>';
       html+='</div>';
@@ -2024,6 +2023,7 @@ function rFinance(){
   html+='<div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:.7;margin-bottom:6px">Ingresos del mes</div>';
   html+='<div style="font-size:10px;opacity:.6;margin-bottom:10px">'+mNames2[curMonth]+' 2026</div>';
   html+='<div style="font-family:var(--mono);font-size:38px;font-weight:700;letter-spacing:-2px;margin-bottom:6px">$'+thisM.rev.toLocaleString()+'</div>';
+  html+='<div style="font-size:9px;opacity:.5;margin-bottom:6px">Si el monto es incorrecto, usa el botón ✏️ en la tabla de abajo para corregirlo</div>';
   html+='<div style="display:flex;gap:16px;font-size:11px;opacity:.8;margin-bottom:14px">';
   html+='<div>Gastos: <span style="font-family:var(--mono);color:#fca5a5">$'+thisM.exp.toLocaleString()+'</span></div>';
   html+='<div>Neto: <span style="font-family:var(--mono);color:'+(mNet>=0?'#86efac':'#fca5a5')+'">$'+mNet.toLocaleString()+'</span></div>';
@@ -2043,7 +2043,7 @@ function rFinance(){
   html+='<div class="mc" style="background:#eef0fd;border-color:#bfc9fc"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+icn('pay_ok',18)+'<div class="mc-l" style="color:#4a6cf7;margin:0">Total cobrado</div></div><div class="mc-v" style="color:#4a6cf7">$'+tP.toLocaleString()+'</div><div class="mc-s" style="color:#4a6cf7">'+Math.round(tP/tB*100)+'% del total</div></div>';
   html+='<div class="mc" style="background:#f3f4f6;border-color:#d1d5db"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+icn('pay_pending',18)+'<div class="mc-l" style="color:#5a5f72;margin:0">Por cobrar</div></div><div class="mc-v" style="color:#5a5f72">$'+tPend.toLocaleString()+'</div></div>';
   html+='</div>';
-  html+='<div class="card" style="margin-bottom:14px"><div class="shdr">Ingresos por mes (con pactado estimado)</div>';
+  html+='<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="shdr" style="margin:0">Ingresos por mes (con pactado estimado)</div><button class="btn btn-rose btn-xs" onclick="if(confirm(\'Resetear ingresos a $0? No borra clientes.\')){DB.monthly.forEach(function(m){m.rev=0;m.exp=0;});saveToStorage();render();}">🗑 Limpiar</button></div>';
   html+='<div style="display:grid;grid-template-columns:52px 80px 1fr 60px 60px 60px 36px;gap:6px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);padding-bottom:6px;border-bottom:1px solid var(--border2)"><span>Mes</span><span>Pactado</span><span>Barra</span><span style="text-align:right">Ingresos</span><span style="text-align:right">Gastos</span><span style="text-align:right">Neto</span></div>';
   for(var i=0;i<DB.monthly.length;i++){
     var m=DB.monthly[i];var net=m.rev-m.exp;var pct=maxRev>0?Math.round(m.rev/maxRev*100):0;var pact=pactedByMonth[m.m]||0;
@@ -3070,6 +3070,13 @@ function loadFromStorage(){
     if(ejsPub)DB.emailjsPublicKey=ejsPub;
     var mwh=localStorage.getItem('studioMakeWebhook');
     if(mwh)DB.makeWebhookUrl=mwh;
+    // Auto-fix: if monthly revenue was corrupted by old markDep bug, reset it
+    // Only reset if the revenue doesn't match any client's paid amount pattern
+    var totalPaid=DB.clients.reduce(function(a,c){return a+(c.paid||0);},0);
+    DB.monthly.forEach(function(m){
+      // If a month has rev but no clients started that month, and rev isn't manually set
+      // we can't auto-reset safely — user must use ✏️ button to correct
+    });
     return true;
   }catch(e){console.warn('Load failed:',e);return false;}
 }
@@ -3225,6 +3232,25 @@ function saveBirthday(){
   if(!nm||!dt){alert('Agrega nombre y fecha.');return;}
   if(!DB.birthdays)DB.birthdays=[];
   DB.birthdays.push({id:Date.now(),name:nm,date:dt,note:nt});
+  closeM();saveToStorage();render();
+}
+function editBirthday(id){
+  var b=(DB.birthdays||[]).find(function(x){return x.id===id;});
+  if(!b)return;
+  showModal(
+    '<h3>🎂 Editar cumpleaños</h3>'+
+    '<div class="fg"><label class="fl">Nombre</label><input class="fi" id="ebd-nm" value="'+b.name.replace(/"/g,'&quot;')+'"/></div>'+
+    '<div class="fg"><label class="fl">Fecha</label><input class="fi" id="ebd-dt" type="date" value="'+b.date+'"/></div>'+
+    '<div class="fg"><label class="fl">Nota</label><input class="fi" id="ebd-nt" value="'+(b.note||'').replace(/"/g,'&quot;')+'"/></div>'+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-rose btn-xs" onclick="delBirthday('+id+')">Eliminar</button><button class="btn btn-dark btn-sm" onclick="saveBirthdayEdit('+id+')">Guardar</button></div>'
+  );
+}
+function saveBirthdayEdit(id){
+  var b=(DB.birthdays||[]).find(function(x){return x.id===id;});
+  if(!b)return;
+  b.name=document.getElementById('ebd-nm').value||b.name;
+  b.date=document.getElementById('ebd-dt').value||b.date;
+  b.note=document.getElementById('ebd-nt').value||'';
   closeM();saveToStorage();render();
 }
 function delBirthday(id){
