@@ -1808,8 +1808,8 @@ function rSchedule(){
     for(var j=0;j<evs.length;j++){
       var ev=evs[j];
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?cc(cl,1):'var(--indigo-bg)'):ev.type==='note'?'#f3f4f6':ev.type==='task'?'#f3f4f6':cl?cc(cl,1):'var(--indigo-bg)';
-      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?cc(cl,0):'var(--indigo)'):ev.type==='note'?'#6b7280':ev.type==='task'?'#374151':cl?cc(cl,0):'var(--indigo)';
+      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?cc(cl,1):'var(--indigo-bg)'):ev.type==='note'?'#fbbf24':ev.type==='task'?'#f3f4f6':cl?cc(cl,1):'var(--indigo-bg)';
+      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?cc(cl,0):'var(--indigo)'):ev.type==='note'?'#fff':ev.type==='task'?'#374151':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
       var evBg2=isHoliday?'#f1f1f1':isBday?'var(--indigo-bg)':evBg;
       var evFg2=isHoliday?'#374151':isBday?'var(--indigo)':evFg;
@@ -1836,7 +1836,7 @@ function rSchedule(){
   html+='<div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;padding:8px 0">';
   html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:var(--indigo)"></div>Reunión</div>';
   html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#374151"></div>Tarea</div>';
-  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#9ca3af"></div>Nota</div>';
+  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#fbbf24"></div>Nota</div>';
   html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#16a34a"></div>Completado</div>';
   html+='</div>';
   html+='</div>';
@@ -1856,11 +1856,11 @@ function rSchedule(){
     if(!selEvs.length)html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px 0">Sin eventos este dia</div>';
     selEvs.forEach(function(ev){
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var accent=cl?cc(cl,0):ev.type==='note'?'#92400e':'var(--indigo)';
+      var accent=cl?cc(cl,0):ev.type==='note'?'#d97706':'var(--indigo)';
       html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
       html+='<div style="display:flex;align-items:flex-start;gap:6px">';
       var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':'Tarea';
-      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'var(--indigo)':ev.type==='note'?'#92400e':'var(--text2)';
+      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'var(--indigo)':ev.type==='note'?'#d97706':'var(--text2)';
       html+='<div style="font-size:9px;background:'+typeBg+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+typeLabel+'</div>';
       html+='<div style="flex:1">';
       html+='<div style="font-size:11.5px;font-weight:600;color:'+(ev.done?'var(--text3)':'var(--text)')+';text-decoration:'+(ev.done?'line-through':'none')+';line-height:1.4;word-break:break-word">'+ev.ttl+'</div>';
@@ -1896,7 +1896,7 @@ function rSchedule(){
 
     upcoming.forEach(function(ev){
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var accent=cl?cc(cl,0):ev.type==='note'?'#92400e':'var(--indigo)';
+      var accent=cl?cc(cl,0):ev.type==='note'?'#d97706':'var(--indigo)';
       var isToday2=ev.date===TODAY;
       html+='<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bg2);align-items:flex-start">';
       html+='<div style="text-align:center;flex-shrink:0;width:32px">';
