@@ -157,11 +157,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .studio-task{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;background:var(--violet-bg);transition:border .12s}
 .studio-task:hover{border-color:var(--violet-bd)}
 
-.pen-tip{position:relative;cursor:help;border-bottom:1px dashed rgba(74,108,247,.4)}
-.pen-tip::after{content:attr(data-pen);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1d2e;color:#fff;font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s;z-index:9999;font-family:var(--mono);box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.pen-tip:hover::after{opacity:1}
-.pen-tip::before{content:'';position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1a1d2e;pointer-events:none;opacity:0;transition:opacity .2s;z-index:9999}
-.pen-tip:hover::before{opacity:1}
+.pen-tip{position:relative;cursor:help;border-bottom:1px dashed rgba(74,108,247,.5);display:inline}
+.pen-tip .pen-bubble{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1d2e;color:#fff;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;white-space:nowrap;z-index:9999;font-family:var(--mono);box-shadow:0 2px 12px rgba(0,0,0,.4);pointer-events:none}
+.pen-tip:hover .pen-bubble{display:block}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
@@ -213,6 +211,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 </div>
 
 <script>
+// Studio One Dashboard v70 — 2026-06-16
 // ── ICONS ──
 var IC={
   instagram:'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="ig" cx="30%" cy="107%" r="150%"><stop offset="0%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><rect width="24" height="24" rx="6" fill="url(#ig)"/><circle cx="12" cy="12" r="4.5" stroke="white" stroke-width="1.8" fill="none"/><circle cx="17.5" cy="6.5" r="1.2" fill="white"/></svg>',
@@ -393,7 +392,7 @@ var DB={
   monthly:[
     {m:'Ene 26',rev:4000,exp:0},{m:'Feb',rev:4000,exp:0},
     {m:'Mar',rev:4000,exp:0},{m:'Abr',rev:0,exp:0},
-    {m:'May',rev:0,exp:0},{m:'Jun',rev:0,exp:0}
+    {m:'May',rev:0,exp:0},{m:'Jun',rev:0,exp:0}  
   ]
 };
 
@@ -593,7 +592,7 @@ function wrapPen(h,usd){
   if(!usd||isNaN(usd)||usd===0)return h;
   var soles=pen(usd);
   var label='S/ '+soles+' soles';
-  return'<span class="pen-tip" data-pen="'+label+'" title="'+label+'">'+h+'</span>';
+  return'<span class="pen-tip" title="'+label+'">'+h+'<span class="pen-bubble">'+label+'</span></span>';
 }
 function fmtDate(s){return new Date(s+'T12:00').toLocaleDateString('es-PE',{day:'numeric',month:'short'});}
 function fmtShort(d){return(d.getDate())+' '+([ 'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]);}
@@ -1789,9 +1788,9 @@ function rSchedule(){
       var evBg=ev.done?'var(--bg3)':ev.type==='note'?'var(--amber-bg)':cl?cc(cl,1):'var(--indigo-bg)';
       var evFg=ev.done?'var(--text3)':ev.type==='note'?'#92400e':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
-      var evBg2=isHoliday?'#f1f1f1':isBday?'#fdf2f8':evBg;
-      var evFg2=isHoliday?'#374151':isBday?'#be185d':evFg;
-      var evBorder=isHoliday?'1px solid #d1d5db':isBday?'1px solid #fad1e8':'none';
+      var evBg2=isHoliday?'#f1f1f1':isBday?'var(--indigo-bg)':evBg;
+      var evFg2=isHoliday?'#374151':isBday?'var(--indigo)':evFg;
+      var evBorder=isHoliday?'1px solid #d1d5db':isBday?'1px solid var(--indigo-bd)':'none';
       var shortTtl=ev.ttl.length>14?ev.ttl.substring(0,13)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isHoliday||isBday?'600':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
@@ -1838,7 +1837,7 @@ function rSchedule(){
       html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
       html+='<div style="display:flex;align-items:flex-start;gap:6px">';
       var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':'Tarea';
-      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'#be185d':ev.type==='note'?'#92400e':'var(--text2)';
+      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'var(--indigo)':ev.type==='note'?'#92400e':'var(--text2)';
       html+='<div style="font-size:9px;background:'+typeBg+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+typeLabel+'</div>';
       html+='<div style="flex:1">';
       html+='<div style="font-size:11.5px;font-weight:600;color:'+(ev.done?'var(--text3)':'var(--text)')+';text-decoration:'+(ev.done?'line-through':'none')+';line-height:1.4;word-break:break-word">'+ev.ttl+'</div>';
