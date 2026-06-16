@@ -882,19 +882,19 @@ function rClients(){
     var dep=Math.round(c.budget*0.5);
     var final=c.budget-dep;
     html+='<div style="display:flex;gap:4px">';
-    // First 50%
+    // First 50% — toggleable
     if(c.dep){
-      html+='<span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#16a34a;color:#fff;cursor:default">50% ✓</span>';
+      html+='<button onclick="event.stopPropagation();markDep('+c.id+')" style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#16a34a;color:#fff;border:none;cursor:pointer;font-family:var(--sans)" title="Click para revertir">50% ✓</button>';
     } else {
       html+='<button onclick="event.stopPropagation();markDep('+c.id+')" style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#dcfce7;color:#86efac;border:1.5px solid #bbf7d0;cursor:pointer;font-family:var(--sans)">50%</button>';
     }
-    // Second 50%
+    // Second 50% — always clickable when dep is paid (toggleable)
     if(c.pending===0){
-      html+='<span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#16a34a;color:#fff;cursor:default">50% ✓</span>';
+      html+='<button onclick="event.stopPropagation();markFinal('+c.id+')" style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#16a34a;color:#fff;border:none;cursor:pointer;font-family:var(--sans)" title="Click para revertir">50% ✓</button>';
     } else if(c.dep){
       html+='<button onclick="event.stopPropagation();markFinal('+c.id+')" style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#dcfce7;color:#86efac;border:1.5px solid #bbf7d0;cursor:pointer;font-family:var(--sans)">50%</button>';
     } else {
-      html+='<span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#f3f4f6;color:#d1d5db;border:1.5px solid #e5e7eb;cursor:default">50%</span>';
+      html+='<span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#f3f4f6;color:#d1d5db;border:1.5px solid #e5e7eb;cursor:default" title="Paga el primer 50% primero">50%</span>';
     }
     html+='</div>';
     html+='<span class="pill '+(c.st==='active'?'p-lime':c.st==='pending'?'p-amber':'p-neutral')+'">'+(c.st==='active'?'Activo':c.st==='pending'?'En proceso':'Pausado')+'</span>';
@@ -925,27 +925,41 @@ function markDep(id){
   var c=DB.clients.find(function(x){return x.id===id;});
   if(!c)return;
   var h=Math.round(c.budget/2);
-  c.dep=true;c.paid+=h;c.pending-=h;
-  if(c.st==='pending')c.st='active';
-  c.ups.unshift({t:'50% adelanto recibido — $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});
-  // Update monthly revenue
   var curM=new Date(TODAY).getMonth();
   var mNames=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var mEntry=DB.monthly.find(function(m){return m.m===mNames[curM];});
-  if(mEntry)mEntry.rev+=h;
+  if(c.dep){
+    // Undo deposit
+    c.dep=false;c.paid-=h;c.pending+=h;
+    c.ups.unshift({t:'50% adelanto revertido — $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});
+    if(mEntry)mEntry.rev=Math.max(0,mEntry.rev-h);
+  } else {
+    // Mark deposit received
+    c.dep=true;c.paid+=h;c.pending-=h;
+    if(c.st==='pending')c.st='active';
+    c.ups.unshift({t:'50% adelanto recibido — $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});
+    if(mEntry)mEntry.rev+=h;
+  }
   saveToStorage();render();
 }
 function markFinal(id){
   var c=DB.clients.find(function(x){return x.id===id;});
-  if(!c||c.pending<=0)return;
-  var h=c.pending;
-  c.paid+=h;c.pending=0;c.st='active';
-  c.ups.unshift({t:'Pago final recibido — $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});
-  // Update monthly revenue
+  if(!c||!c.dep)return;
+  var h=Math.round(c.budget/2);
   var curM=new Date(TODAY).getMonth();
   var mNames=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var mEntry=DB.monthly.find(function(m){return m.m===mNames[curM];});
-  if(mEntry)mEntry.rev+=h;
+  if(c.pending===0){
+    // Undo final payment
+    c.paid-=h;c.pending=h;
+    c.ups.unshift({t:'Pago final revertido — $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});
+    if(mEntry)mEntry.rev=Math.max(0,mEntry.rev-h);
+  } else {
+    // Mark final payment received
+    c.paid+=c.pending;c.pending=0;c.st='active';
+    c.ups.unshift({t:'Pago final recibido — $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});
+    if(mEntry)mEntry.rev+=h;
+  }
   saveToStorage();render();
 }
 function selC(id){DB.selClient=DB.clients.find(function(c){return c.id===id;});if(DB.view==='clients')render();}
@@ -1008,11 +1022,11 @@ function rDetail(c){
   html+='<div style="display:flex;gap:8px">';
   // First 50% pill
   if(c.dep){
-    html+='<div style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#16a34a;cursor:default">';
+    html+='<button onclick="markDep('+c.id+')" style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#16a34a;border:none;cursor:pointer;font-family:var(--sans)" title="Click para revertir">';
     html+='<div style="font-size:10px;font-weight:700;color:#fff">50% depósito</div>';
     html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;margin-top:2px">$'+dep.toLocaleString()+'</div>';
-    html+='<div style="font-size:9px;color:rgba(255,255,255,.8);margin-top:2px">✓ Recibido</div>';
-    html+='</div>';
+    html+='<div style="font-size:9px;color:rgba(255,255,255,.8);margin-top:2px">✓ Recibido · click para revertir</div>';
+    html+='</button>';
   } else {
     html+='<button onclick="markDep('+c.id+')" style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#dcfce7;border:2px solid #86efac;cursor:pointer;font-family:var(--sans)">';
     html+='<div style="font-size:10px;font-weight:700;color:#86efac">50% depósito</div>';
@@ -1022,11 +1036,11 @@ function rDetail(c){
   }
   // Second 50% pill
   if(c.pending===0){
-    html+='<div style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#16a34a;cursor:default">';
+    html+='<button onclick="markFinal('+c.id+')" style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#16a34a;border:none;cursor:pointer;font-family:var(--sans)" title="Click para revertir">';
     html+='<div style="font-size:10px;font-weight:700;color:#fff">50% final</div>';
     html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;margin-top:2px">$'+final.toLocaleString()+'</div>';
-    html+='<div style="font-size:9px;color:rgba(255,255,255,.8);margin-top:2px">✓ Recibido</div>';
-    html+='</div>';
+    html+='<div style="font-size:9px;color:rgba(255,255,255,.8);margin-top:2px">✓ Recibido · click para revertir</div>';
+    html+='</button>';
   } else if(c.dep){
     html+='<button onclick="markFinal('+c.id+')" style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#dcfce7;border:2px solid #86efac;cursor:pointer;font-family:var(--sans)">';
     html+='<div style="font-size:10px;font-weight:700;color:#86efac">50% final</div>';
