@@ -877,9 +877,27 @@ function rClients(){
     html+='<div style="display:flex;gap:3px;align-items:center;margin-top:4px"><div class="prog" style="flex:1"><div class="prog-f" style="width:'+wp.cp+'%;background:'+cc(c,0)+'"></div></div><span style="font-size:9px;color:'+(bh?'var(--rose)':'var(--text3)')+';font-weight:600">'+wp.cp+'%</span></div>';
     html+='<div style="font-size:9px;color:var(--text3)">'+wp.cl+'</div></div>';
     html+='<div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">';
-    html+='<div style="display:flex;align-items:center;gap:4px">'+icn(c.dep?'pay_ok':'pay_pending',14)+'<span style="font-family:var(--mono);font-size:11px">$'+c.budget.toLocaleString()+'</span></div>';
+    html+='<div style="font-family:var(--mono);font-size:11px;font-weight:600">$'+c.budget.toLocaleString()+'</div>';
+    // Two payment pills — muted when unpaid, saturated green when paid
+    var dep=Math.round(c.budget*0.5);
+    var final=c.budget-dep;
+    html+='<div style="display:flex;gap:4px">';
+    // First 50%
+    if(c.dep){
+      html+='<span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#16a34a;color:#fff;cursor:default">50% ✓</span>';
+    } else {
+      html+='<button onclick="event.stopPropagation();markDep('+c.id+')" style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#dcfce7;color:#86efac;border:1.5px solid #bbf7d0;cursor:pointer;font-family:var(--sans)">50%</button>';
+    }
+    // Second 50%
+    if(c.pending===0){
+      html+='<span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#16a34a;color:#fff;cursor:default">50% ✓</span>';
+    } else if(c.dep){
+      html+='<button onclick="event.stopPropagation();markFinal('+c.id+')" style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#dcfce7;color:#86efac;border:1.5px solid #bbf7d0;cursor:pointer;font-family:var(--sans)">50%</button>';
+    } else {
+      html+='<span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:#f3f4f6;color:#d1d5db;border:1.5px solid #e5e7eb;cursor:default">50%</span>';
+    }
+    html+='</div>';
     html+='<span class="pill '+(c.st==='active'?'p-lime':c.st==='pending'?'p-amber':'p-neutral')+'">'+(c.st==='active'?'Activo':c.st==='pending'?'En proceso':'Pausado')+'</span>';
-    if(!c.dep)html+='<button class="btn btn-lime btn-xs" onclick="event.stopPropagation();markDep('+c.id+')">50% recibido</button>';
     html+='<button class="btn btn-light btn-xs" onclick="event.stopPropagation();openEditClientModal('+c.id+')" title="Editar cliente">&#9998; Editar</button>';
     html+='<button class="btn btn-rose btn-xs" onclick="event.stopPropagation();delClient('+c.id+')" title="Eliminar cliente">&#128465; Eliminar</button>';
     html+='</div></div>';
@@ -985,30 +1003,44 @@ function rDetail(c){
   // Payment action buttons
   var dep=Math.round(c.budget*0.5);
   var final=c.budget-dep;
-  html+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">';
-  if(!c.dep){
-    html+='<button onclick="markDep('+c.id+')" style="width:100%;background:var(--indigo-bg);border:1.5px solid var(--indigo-bd);border-radius:8px;padding:9px 12px;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;justify-content:space-between">';
-    html+='<span style="font-size:11px;font-weight:600;color:var(--indigo)">✓ Recibí 50% depósito</span>';
-    html+='<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--indigo)">+$'+dep.toLocaleString()+'</span>';
+  html+='<div style="margin-top:10px">';
+  html+='<div style="font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Pagos</div>';
+  html+='<div style="display:flex;gap:8px">';
+  // First 50% pill
+  if(c.dep){
+    html+='<div style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#16a34a;cursor:default">';
+    html+='<div style="font-size:10px;font-weight:700;color:#fff">50% depósito</div>';
+    html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;margin-top:2px">$'+dep.toLocaleString()+'</div>';
+    html+='<div style="font-size:9px;color:rgba(255,255,255,.8);margin-top:2px">✓ Recibido</div>';
+    html+='</div>';
+  } else {
+    html+='<button onclick="markDep('+c.id+')" style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#dcfce7;border:2px solid #86efac;cursor:pointer;font-family:var(--sans)">';
+    html+='<div style="font-size:10px;font-weight:700;color:#86efac">50% depósito</div>';
+    html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#86efac;margin-top:2px">$'+dep.toLocaleString()+'</div>';
+    html+='<div style="font-size:9px;color:#86efac;margin-top:2px">Pendiente</div>';
+    html+='</button>';
+  }
+  // Second 50% pill
+  if(c.pending===0){
+    html+='<div style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#16a34a;cursor:default">';
+    html+='<div style="font-size:10px;font-weight:700;color:#fff">50% final</div>';
+    html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;margin-top:2px">$'+final.toLocaleString()+'</div>';
+    html+='<div style="font-size:9px;color:rgba(255,255,255,.8);margin-top:2px">✓ Recibido</div>';
+    html+='</div>';
+  } else if(c.dep){
+    html+='<button onclick="markFinal('+c.id+')" style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#dcfce7;border:2px solid #86efac;cursor:pointer;font-family:var(--sans)">';
+    html+='<div style="font-size:10px;font-weight:700;color:#86efac">50% final</div>';
+    html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#86efac;margin-top:2px">$'+final.toLocaleString()+'</div>';
+    html+='<div style="font-size:9px;color:#86efac;margin-top:2px">Pendiente</div>';
     html+='</button>';
   } else {
-    html+='<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px">';
-    html+='<span style="font-size:16px">✅</span>';
-    html+='<span style="font-size:11px;color:#16a34a;font-weight:600">50% depósito recibido — $'+dep.toLocaleString()+'</span>';
+    html+='<div style="flex:1;text-align:center;padding:10px 8px;border-radius:10px;background:#f3f4f6;border:2px solid #e5e7eb;cursor:default">';
+    html+='<div style="font-size:10px;font-weight:700;color:#d1d5db">50% final</div>';
+    html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#d1d5db;margin-top:2px">$'+final.toLocaleString()+'</div>';
+    html+='<div style="font-size:9px;color:#d1d5db;margin-top:2px">Bloqueado</div>';
     html+='</div>';
   }
-  if(c.dep&&c.pending>0){
-    html+='<button onclick="markFinal('+c.id+')" style="width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;justify-content:space-between">';
-    html+='<span style="font-size:11px;font-weight:600;color:var(--text)">✓ Recibí pago final</span>';
-    html+='<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">+$'+final.toLocaleString()+'</span>';
-    html+='</button>';
-  } else if(c.pending===0){
-    html+='<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px">';
-    html+='<span style="font-size:16px">✅</span>';
-    html+='<span style="font-size:11px;color:#16a34a;font-weight:600">Proyecto pagado al 100%</span>';
-    html+='</div>';
-  }
-  html+='</div>';
+  html+='</div></div>';
   html+='<div style="font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin:12px 0 6px">Avance Sem '+wp.we+'/'+c.wks+'</div>';
   html+='<div style="font-size:10px;color:var(--text2);margin-bottom:5px">'+wp.cp+'% real vs '+wp.ep+'% esperado</div>';
   html+='<div style="display:flex;gap:2px;margin-bottom:4px">';
