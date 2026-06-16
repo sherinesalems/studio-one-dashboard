@@ -3247,7 +3247,31 @@ function openUpdateModal(id){showModal('<h3>Actualizacion</h3>'+fta('Nota','u-tx
 function saveUpdate(id){var c=DB.clients.find(function(c){return c.id===id;});var txt=document.getElementById('u-tx').value;if(c&&txt)c.ups.unshift({t:txt,d:'Hoy',c:cc(c,0)});closeM();DB.selClient=c;render();}
 
 function openTaskModal(){var opts=DB.clients.map(function(c){return'<option>'+c.co+'</option>';}).join('');showModal('<h3>Nueva tarea &mdash; cliente</h3>'+fg('Descripcion','t-ti','Ej. Disenar portada','')+' <div class="fg"><label class="fl">Cliente</label><select class="fs" id="t-cl">'+opts+'</select></div>'+fg('Fecha limite','t-du','','date')+fsel('Prioridad','t-pr',[['high','Alta'],['medium','Media'],['low','Baja']])+'<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveTask()">Crear</button></div>');}
-function saveTask(){DB.tasks.unshift({id:Date.now(),ttl:document.getElementById('t-ti').value||'Nueva tarea',cl:document.getElementById('t-cl').value,due:document.getElementById('t-du').value||'2026-06-15',pr:document.getElementById('t-pr').value,st:'pending'});closeM();buildNav();render();}
+function saveTask(){DB.tasks.unshift({id:Date.now(),ttl:document.getElementById('t-ti').value||'Nueva tarea',cl:document.getElementById('t-cl').value,due:document.getElementById('t-du').value||TODAY,pr:document.getElementById('t-pr').value,st:'pending'});closeM();saveToStorage();buildNav();render();}
+function delTask(id){DB.tasks=DB.tasks.filter(function(t){return t.id!==id;});closeM();saveToStorage();buildNav();render();}
+function toggleTask(id){var t=DB.tasks.find(function(x){return x.id===id;});if(!t)return;t.st=t.st==='done'?'pending':'done';saveToStorage();render();}
+function editTask(id){
+  var t=DB.tasks.find(function(x){return x.id===id;});if(!t)return;
+  var opts=DB.clients.map(function(c){return'<option'+(c.co===t.cl?' selected':'')+'>'+c.co+'</option>';}).join('');
+  showModal('<h3>Editar tarea</h3>'+
+    '<div class="fg"><label class="fl">Titulo</label><input class="fi" id="et-ti" value="'+t.ttl.replace(/"/g,'&quot;')+'"/></div>'+
+    '<div class="fg"><label class="fl">Cliente</label><select class="fs" id="et-cl">'+opts+'</select></div>'+
+    fg('Fecha','et-du','','date')+
+    fsel('Prioridad','et-pr',[['high','Alta'],['medium','Media'],['low','Baja']])+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-rose btn-xs" onclick="delTask('+id+');closeM()">Eliminar</button><button class="btn btn-dark btn-sm" onclick="saveTaskEdit('+id+')">Guardar</button></div>');
+  setTimeout(function(){
+    var du=document.getElementById('et-du');if(du){du.type='date';du.value=t.due||'';}
+    var pr=document.getElementById('et-pr');if(pr)pr.value=t.pr||'medium';
+  },0);
+}
+function saveTaskEdit(id){
+  var t=DB.tasks.find(function(x){return x.id===id;});if(!t)return;
+  t.ttl=document.getElementById('et-ti').value||t.ttl;
+  t.cl=document.getElementById('et-cl').value||t.cl;
+  t.due=document.getElementById('et-du').value||t.due;
+  t.pr=document.getElementById('et-pr').value||t.pr;
+  closeM();saveToStorage();render();
+}
 
 function openStudioTaskModal(){
   var catOpts=[['Marketing','Marketing'],['Social Media','Social Media'],['Estrategia','Estrategia'],['Operaciones','Operaciones'],['Admin','Admin'],['Otro','Otro']];
