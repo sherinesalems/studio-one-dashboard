@@ -589,7 +589,7 @@ function pen(usd){
 function wrapPen(h,usd){
   if(!usd||isNaN(usd)||usd===0)return h;
   var soles=pen(usd);
-  return h+'<span style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-left:4px;font-weight:400">S/'+soles+'</span>';
+  return '<span style="display:inline-flex;align-items:baseline;gap:5px">'+h+'<span style="font-size:10px;color:var(--indigo);font-family:var(--mono);font-weight:600;opacity:.7">S/'+soles+'</span></span>';
 }
 function fmtDate(s){return new Date(s+'T12:00').toLocaleDateString('es-PE',{day:'numeric',month:'short'});}
 function fmtShort(d){return(d.getDate())+' '+([ 'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]);}
@@ -1413,6 +1413,32 @@ function rPackages(){
     return html;
   }
 
+  // ── SERVICES TAB — early return before package cards ──
+  if(tab==='services'){
+    html+='<div style="max-width:800px;padding:16px">';
+    html+='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Servicios Individuales</div>';
+    html+='<div style="font-size:11px;color:var(--text3);margin-bottom:16px">Build your own scope. Todos los precios en USD. 50% adelanto requerido. Rush = +30%. Revision adicional = +$50.</div>';
+    html+='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px">';
+    html+='<div style="display:grid;grid-template-columns:1fr 100px;background:#1a1d2e;padding:10px 16px">';
+    html+='<div style="font-size:10px;font-weight:700;color:#fff;letter-spacing:.8px;text-transform:uppercase">SERVICE</div>';
+    html+='<div style="font-size:10px;font-weight:700;color:#fff;letter-spacing:.8px;text-transform:uppercase;text-align:right">PRICE (USD)</div>';
+    html+='</div>';
+    for(var i=0;i<INDIVIDUAL_SERVICES.length;i++){
+      var sv=INDIVIDUAL_SERVICES[i];var odd=i%2===0;
+      html+='<div style="display:grid;grid-template-columns:1fr 100px;padding:9px 16px;background:'+(odd?'var(--bg2)':'#fff')+';border-top:1px solid var(--border)">';
+      html+='<div><div style="font-size:11.5px;font-weight:'+(sv.bold?'700':'500')+'">'+sv.name+'</div>';
+      if(sv.detail)html+='<div style="font-size:9px;color:var(--text3);margin-top:2px;line-height:1.4">'+sv.detail+'</div>';
+      html+='</div>';
+      html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;color:var(--text)">$'+sv.price.toLocaleString()+'</div>';
+      html+='</div>';
+    }
+    html+='</div>';
+    html+='<div style="padding:12px 16px;background:var(--indigo-bg);border:1px solid var(--indigo-bd);border-radius:10px;font-size:10.5px;color:var(--text2);line-height:1.8">';
+    html+='<b>Rush:</b> 50% faster = +30% &nbsp;&middot;&nbsp; <b>Revision adicional</b> = +$50 &nbsp;&middot;&nbsp; <b>Deposito:</b> 50% para comenzar, 50% al entregar';
+    html+='</div></div></div></div>';
+    return html;
+  }
+
   // Package cards
   var pkgData=[
     {
@@ -1782,8 +1808,8 @@ function rSchedule(){
     for(var j=0;j<evs.length;j++){
       var ev=evs[j];
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var evBg=ev.done?'var(--bg3)':ev.type==='note'?'var(--amber-bg)':cl?cc(cl,1):'var(--indigo-bg)';
-      var evFg=ev.done?'var(--text3)':ev.type==='note'?'#92400e':cl?cc(cl,0):'var(--indigo)';
+      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?cc(cl,1):'var(--indigo-bg)'):ev.type==='note'?'#f3f4f6':ev.type==='task'?'#f3f4f6':cl?cc(cl,1):'var(--indigo-bg)';
+      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?cc(cl,0):'var(--indigo)'):ev.type==='note'?'#6b7280':ev.type==='task'?'#374151':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
       var evBg2=isHoliday?'#f1f1f1':isBday?'var(--indigo-bg)':evBg;
       var evFg2=isHoliday?'#374151':isBday?'var(--indigo)':evFg;
@@ -1807,11 +1833,11 @@ function rSchedule(){
   html+='</div>';
 
   // Legend
-  html+='<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">';
-  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text3)"><div style="width:10px;height:10px;border-radius:2px;background:var(--indigo-bg)"></div>Reunión</div>';
-  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text3)"><div style="width:10px;height:10px;border-radius:2px;background:var(--bg3)"></div>Tarea</div>';
-  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text3)"><div style="width:10px;height:10px;border-radius:2px;background:var(--amber-bg)"></div>Nota</div>';
-  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text3)"><div style="width:10px;height:10px;border-radius:2px;background:var(--bg3);opacity:.5"></div>Completado</div>';
+  html+='<div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;padding:8px 0">';
+  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:var(--indigo)"></div>Reunión</div>';
+  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#374151"></div>Tarea</div>';
+  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#9ca3af"></div>Nota</div>';
+  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#16a34a"></div>Completado</div>';
   html+='</div>';
   html+='</div>';
 
@@ -2840,7 +2866,7 @@ function fta(l,id,ph){return'<div class="fg"><label class="fl">'+l+'</label><tex
 var INDIVIDUAL_SERVICES=[
   {id:'sv00',name:'Naming Strategy',detail:'Brand Discovery + Competitive Research + Up to 10 Name Options + 2 Revision Rounds',price:150,days:3,bold:true},
   {id:'sv01',name:'Logo Design',detail:'5 concepts + 2 Revision Rounds | Primary Logo, Logomark, Isotype | AI, PDF, PNG, SVG',price:280,days:5,bold:true},
-  {id:'sv02',name:'Additional Logo Variation',detail:'Wordmark, Horizontal Lockup, Badge Version, or Alternate Layout',price:80,days:2},
+  {id:'sv02',name:'Additional Logo Variation',detail:'Wordmark, Horizontal Lockup, Badge Version, or Alternate Layout',price:50,days:2},
   {id:'sv03',name:'Color Palette',detail:'Primary & Secondary | HEX + CMYK | 3 Explorations + 2 Revision Rounds',price:100,days:2},
   {id:'sv04',name:'Typography System',detail:'Primary & Secondary | 3 Explorations + 2 Revision Rounds',price:120,days:2},
   {id:'sv05',name:'Stationery Pack',detail:'Business Card, Letterhead, Envelope + 1 Revision Round + 3 Mockups',price:250,days:4,bold:true},
@@ -2854,7 +2880,7 @@ var INDIVIDUAL_SERVICES=[
   {id:'sv13',name:'Packaging Design',detail:'per SKU — One product variation (size, flavor, scent, version) | Product Label + Front & Back + 2 Concepts + 2 Revision Rounds | Additional SKU = +$400 | Additional Revision = +$100',price:400,days:5,bold:true},
   {id:'sv14',name:'Website Prototype Design',detail:'Up to 5 Pages',price:800,days:10},
   {id:'sv15',name:'Campaign / Advertising Visual',detail:'per piece | 2–3 Concepts + 2 Revision Rounds | Meta Ads, Web Banners, Launch Graphics, Promotional Campaigns',price:180,days:3},
-  {id:'sv16',name:'Brand Elements',detail:'3 Concepts: Patterns, Textures, Icons, Supporting Graphic Elements + 2 Revision Rounds',price:180,days:3},
+  {id:'sv16',name:'Brand Elements',detail:'3 Concepts: Patterns, Textures, Icons, Supporting Graphic Elements + 2 Revision Rounds',price:150,days:3},
   {id:'sv17',name:'Brochure / Flyer Design',detail:'1 Concept + 1 Revision Round + Print-Ready Files',price:450,days:3},
   {id:'sv18',name:'Merchandising',detail:'4 Concepts + 1 Revision Round | Extra Merch Application = +$50',price:250,days:3},
   {id:'sv19',name:'Signage & Environmental Graphics',detail:'2 Concepts + 2 Revision Rounds | Custom signage systems, murals, wall graphics, environmental branding, wayfinding, icon systems and large-format visual applications',price:280,days:5,bold:true}
