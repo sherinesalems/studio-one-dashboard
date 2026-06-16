@@ -1811,9 +1811,9 @@ function rSchedule(){
       var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?cc(cl,1):'var(--indigo-bg)'):ev.type==='note'?'#fbbf24':ev.type==='task'?'#f3f4f6':cl?cc(cl,1):'var(--indigo-bg)';
       var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?cc(cl,0):'var(--indigo)'):ev.type==='note'?'#fff':ev.type==='task'?'#374151':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
-      var evBg2=isHoliday?'#f1f1f1':isBday?'var(--indigo-bg)':evBg;
-      var evFg2=isHoliday?'#374151':isBday?'var(--indigo)':evFg;
-      var evBorder=isHoliday?'1px solid #d1d5db':isBday?'1px solid var(--indigo-bd)':'none';
+      var evBg2=isHoliday?'#f1f1f1':isBday?'#4a6cf7':evBg;
+      var evFg2=isHoliday?'#374151':isBday?'#fff':evFg;
+      var evBorder=isHoliday?'1px solid #d1d5db':isBday?'1px solid #4a6cf7':'none';
       var shortTtl=ev.ttl.length>14?ev.ttl.substring(0,13)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isHoliday||isBday?'600':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
@@ -1860,7 +1860,7 @@ function rSchedule(){
       html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
       html+='<div style="display:flex;align-items:flex-start;gap:6px">';
       var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':'Tarea';
-      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'var(--indigo)':ev.type==='note'?'#d97706':'var(--text2)';
+      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'#4a6cf7':ev.type==='note'?'#d97706':'var(--text2)';
       html+='<div style="font-size:9px;background:'+typeBg+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+typeLabel+'</div>';
       html+='<div style="flex:1">';
       html+='<div style="font-size:11.5px;font-weight:600;color:'+(ev.done?'var(--text3)':'var(--text)')+';text-decoration:'+(ev.done?'line-through':'none')+';line-height:1.4;word-break:break-word">'+ev.ttl+'</div>';
