@@ -153,6 +153,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .tl-mh{flex:1;text-align:center;font-size:9px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase}
 .studio-task{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;background:var(--violet-bg);transition:border .12s}
 .studio-task:hover{border-color:var(--violet-bd)}
+
+.pen-tip{position:relative;cursor:help}
+.pen-tip::after{content:attr(data-pen);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#1a1d2e;color:#fff;font-size:9.5px;font-weight:600;padding:3px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;font-family:var(--mono)}
+.pen-tip:hover::after{opacity:1}
+.pen-tip::before{content:'';position:absolute;bottom:calc(100%);left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1a1d2e;pointer-events:none;opacity:0;transition:opacity .15s;z-index:999}
+.pen-tip:hover::before{opacity:1}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
@@ -374,7 +380,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -573,6 +579,17 @@ function getStepDates(c){
     var ed=new Date(cur);ed.setDate(ed.getDate()-1);
     return{id:s.id,start:sd,end:ed};
   });
+}
+function pen(usd){
+  if(!usd||isNaN(usd))return'';
+  var rate=DB.penRate||3.41;
+  var soles=(usd*rate).toLocaleString('es-PE',{minimumFractionDigits:0,maximumFractionDigits:0});
+  return soles;
+}
+function wrapPen(html,usd){
+  if(!usd||isNaN(usd)||usd===0)return html;
+  var soles=pen(usd);
+  return'<span class="pen-tip" data-pen="S/ '+soles+' soles">'+html+'</span>';
 }
 function fmtDate(s){return new Date(s+'T12:00').toLocaleDateString('es-PE',{day:'numeric',month:'short'});}
 function fmtShort(d){return(d.getDate())+' '+([ 'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]);}
