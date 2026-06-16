@@ -2,6 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 <title>Studio One — Brand Studio OS</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=DM+Sans:wght@300;400;500;600&family=Space+Mono&display=swap');
@@ -1786,9 +1789,9 @@ function rSchedule(){
       var evBg=ev.done?'var(--bg3)':ev.type==='note'?'var(--amber-bg)':cl?cc(cl,1):'var(--indigo-bg)';
       var evFg=ev.done?'var(--text3)':ev.type==='note'?'#92400e':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
-      var evBg2=isHoliday?'#fef3c7':isBday?'#fdf2f8':evBg;
-      var evFg2=isHoliday?'#92400e':isBday?'#be185d':evFg;
-      var evBorder=isHoliday?'1px solid #fde68a':isBday?'1px solid #fad1e8':'none';
+      var evBg2=isHoliday?'#f1f1f1':isBday?'#fdf2f8':evBg;
+      var evFg2=isHoliday?'#374151':isBday?'#be185d':evFg;
+      var evBorder=isHoliday?'1px solid #d1d5db':isBday?'1px solid #fad1e8':'none';
       var shortTtl=ev.ttl.length>14?ev.ttl.substring(0,13)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isHoliday||isBday?'600':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
@@ -1835,7 +1838,7 @@ function rSchedule(){
       html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
       html+='<div style="display:flex;align-items:flex-start;gap:6px">';
       var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':'Tarea';
-      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#d97706':ev.type==='birthday'?'#be185d':ev.type==='note'?'#92400e':'var(--text2)';
+      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'#be185d':ev.type==='note'?'#92400e':'var(--text2)';
       html+='<div style="font-size:9px;background:'+typeBg+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+typeLabel+'</div>';
       html+='<div style="flex:1">';
       html+='<div style="font-size:11.5px;font-weight:600;color:'+(ev.done?'var(--text3)':'var(--text)')+';text-decoration:'+(ev.done?'line-through':'none')+';line-height:1.4;word-break:break-word">'+ev.ttl+'</div>';
@@ -1969,6 +1972,23 @@ function saveMeetEdit(id){
 }
 
 // ── FINANCE ──
+function editMonthly(idx){
+  var m=DB.monthly[idx];
+  showModal(
+    '<h3>Editar '+m.m+'</h3>'+
+    '<div style="font-size:10.5px;color:var(--text3);margin-bottom:12px">Edita los ingresos y gastos reales de este mes.</div>'+
+    '<div class="fg"><label class="fl">Ingresos ($)</label><input class="fi" id="em-rev" type="number" value="'+m.rev+'"/></div>'+
+    '<div class="fg"><label class="fl">Gastos ($)</label><input class="fi" id="em-exp" type="number" value="'+m.exp+'"/></div>'+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveMonthly('+idx+')">Guardar</button></div>'
+  );
+}
+function saveMonthly(idx){
+  var rev=parseInt(document.getElementById('em-rev').value)||0;
+  var exp=parseInt(document.getElementById('em-exp').value)||0;
+  DB.monthly[idx].rev=rev;
+  DB.monthly[idx].exp=exp;
+  closeM();saveToStorage();render();
+}
 function rFinance(){
   var tB=DB.clients.reduce(function(a,c){return a+c.budget;},0);
   var tP=DB.clients.reduce(function(a,c){return a+c.paid;},0);
@@ -2025,10 +2045,10 @@ function rFinance(){
   html+='<div class="mc" style="background:#f3f4f6;border-color:#d1d5db"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+icn('pay_pending',18)+'<div class="mc-l" style="color:#5a5f72;margin:0">Por cobrar</div></div><div class="mc-v" style="color:#5a5f72">$'+tPend.toLocaleString()+'</div></div>';
   html+='</div>';
   html+='<div class="card" style="margin-bottom:14px"><div class="shdr">Ingresos por mes (con pactado estimado)</div>';
-  html+='<div style="display:grid;grid-template-columns:52px 80px 1fr 60px 60px 60px;gap:6px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);padding-bottom:6px;border-bottom:1px solid var(--border2)"><span>Mes</span><span>Pactado</span><span>Barra</span><span style="text-align:right">Ingresos</span><span style="text-align:right">Gastos</span><span style="text-align:right">Neto</span></div>';
+  html+='<div style="display:grid;grid-template-columns:52px 80px 1fr 60px 60px 60px 36px;gap:6px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);padding-bottom:6px;border-bottom:1px solid var(--border2)"><span>Mes</span><span>Pactado</span><span>Barra</span><span style="text-align:right">Ingresos</span><span style="text-align:right">Gastos</span><span style="text-align:right">Neto</span></div>';
   for(var i=0;i<DB.monthly.length;i++){
-    var m=DB.monthly[i];var net=m.rev-m.exp;var pct=Math.round(m.rev/maxRev*100);var pact=pactedByMonth[m.m]||0;
-    html+='<div style="display:grid;grid-template-columns:52px 80px 1fr 60px 60px 60px;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px">';
+    var m=DB.monthly[i];var net=m.rev-m.exp;var pct=maxRev>0?Math.round(m.rev/maxRev*100):0;var pact=pactedByMonth[m.m]||0;
+    html+='<div style="display:grid;grid-template-columns:52px 80px 1fr 60px 60px 60px 36px;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px">';
     html+='<div style="font-family:var(--mono);font-size:11px;font-weight:500">'+m.m+'</div>';
     html+='<div style="font-family:var(--mono);font-size:10px;color:var(--violet)">$'+pact.toLocaleString()+'</div>';
     html+='<div><div style="height:7px;border-radius:4px;background:var(--bg3)"><div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#4a6cf7,#7c3aed);border-radius:4px"></div></div></div>';
@@ -3126,6 +3146,41 @@ function saveEditClient(id){
 }
 // Peru public holidays 2026
 var PERU_HOLIDAYS=[
+  // Peru holidays
+  {date:'2026-01-01',name:'Año Nuevo',emoji:'🎆'},
+  {date:'2026-04-02',name:'Jueves Santo',emoji:'✝️'},
+  {date:'2026-04-03',name:'Viernes Santo',emoji:'✝️'},
+  {date:'2026-05-01',name:'Día del Trabajo',emoji:'👷'},
+  {date:'2026-06-07',name:'Batalla de Arica',emoji:'🇵🇪'},
+  {date:'2026-06-29',name:'San Pedro y San Pablo',emoji:'⛪'},
+  {date:'2026-07-28',name:'Independencia del Perú',emoji:'🇵🇪'},
+  {date:'2026-07-29',name:'Gran Unidad Nacional',emoji:'🇵🇪'},
+  {date:'2026-08-06',name:'Batalla de Junín',emoji:'⚔️'},
+  {date:'2026-08-30',name:'Santa Rosa de Lima',emoji:'🌹'},
+  {date:'2026-10-08',name:'Combate de Angamos',emoji:'⚓'},
+  {date:'2026-11-01',name:'Todos los Santos',emoji:'🕯️'},
+  {date:'2026-12-08',name:'Inmaculada Concepción',emoji:'💙'},
+  {date:'2026-12-09',name:'Batalla de Ayacucho',emoji:'🗡️'},
+  {date:'2026-12-25',name:'Navidad',emoji:'🎄'},
+  // US / Universal holidays
+  {date:'2026-01-19',name:'Martin Luther King Jr.',emoji:'✊'},
+  {date:'2026-02-16',name:'Presidents Day',emoji:'🏛️'},
+  {date:'2026-02-14',name:'Dia de San Valentin',emoji:'💝'},
+  {date:'2026-03-08',name:'Día de la Mujer',emoji:'👩'},
+  {date:'2026-04-05',name:'Pascua / Easter',emoji:'🐣'},
+  {date:'2026-05-10',name:'Dia de la Madre',emoji:'💐'},
+  {date:'2026-05-25',name:'Memorial Day',emoji:'🇺🇸'},
+  {date:'2026-06-21',name:'Dia del Padre',emoji:'👨'},
+  {date:'2026-07-04',name:'Independence Day USA',emoji:'🇺🇸'},
+  {date:'2026-09-07',name:'Labor Day',emoji:'🛠️'},
+  {date:'2026-10-12',name:'Columbus Day / Dia de la Raza',emoji:'🌎'},
+  {date:'2026-10-31',name:'Halloween',emoji:'🎃'},
+  {date:'2026-11-11',name:'Veterans Day',emoji:'🎖️'},
+  {date:'2026-11-26',name:'Thanksgiving',emoji:'🦃'},
+  {date:'2026-12-24',name:'Nochebuena / Christmas Eve',emoji:'🎁'},
+  {date:'2026-12-31',name:'Vispera de Año Nuevo',emoji:'🥂'}
+];
+var _UNUSED_=[
   {date:'2026-01-01',name:'Año Nuevo',emoji:'🎆'},
   {date:'2026-04-02',name:'Jueves Santo',emoji:'✝️'},
   {date:'2026-04-03',name:'Viernes Santo',emoji:'✝️'},
