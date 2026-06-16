@@ -380,7 +380,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -1001,77 +1001,145 @@ function convertPot(id){var p=DB.potentials.find(function(x){return x.id===id;})
 
 // ── TASKS ──
 function rTasks(){
-  var cPend=DB.tasks.filter(function(t){return t.st==='pending';});
-  var sPend=DB.studio.tasks.filter(function(t){return t.st==='pending';});
   var todayDate=new Date(TODAY+'T12:00');
   var weekStart=new Date(todayDate);weekStart.setDate(todayDate.getDate()-todayDate.getDay());
   var weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
   function isThisWeek(due){var d=new Date(due+'T12:00');return d>=weekStart&&d<=weekEnd;}
+
   var html='<div class="topbar"><div class="tb-t">Tareas</div><div style="display:flex;gap:6px"><button class="btn btn-violet btn-sm" onclick="openStudioTaskModal()">+ Estudio</button><button class="btn btn-dark btn-sm" onclick="openTaskModal()">+ Cliente</button></div></div>';
-  html+='<div class="content" style="padding:0">';
   html+='<div style="display:flex;height:100%;overflow:hidden">';
 
-  // LEFT: calendar — fixed 340px
-  html+='<div style="width:55%;flex-shrink:0;border-right:1px solid var(--border);padding:16px;overflow-y:auto;background:#fff">';
-  html+='<div class="shdr" style="margin-bottom:8px">Calendario</div>';
-  html+=rMiniCal();
+  // LEFT: small mini calendar (compact)
+  html+='<div style="width:260px;flex-shrink:0;border-right:1px solid var(--border);padding:12px;overflow-y:auto;background:#fff">';
+  html+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Calendario</div>';
+  html+=rMiniCalSmall();
   html+='</div>';
 
-  // RIGHT: tasks — fills remaining space
+  // RIGHT: tasks grouped by client
   html+='<div style="flex:1;overflow-y:auto;padding:16px">';
-  html+='<div class="shdr">Esta semana — Clientes</div>';
-  var thisWeekC=cPend.filter(function(t){return isThisWeek(t.due);});
-  var otherC=cPend.filter(function(t){return !isThisWeek(t.due);});
-  if(!thisWeekC.length&&!otherC.length)html+='<div style="font-size:11px;color:var(--text3);padding:8px 0">Sin tareas pendientes de clientes.</div>';
-  for(var i=0;i<thisWeekC.length;i++){
-    var t=thisWeekC[i];var cl=DB.clients.find(function(c){return c.co===t.cl;});
-    var clBg=cl?cc(cl,1):'var(--indigo-bg)';var clFg=cl?cc(cl,0):'var(--indigo)';
-    html+='<div class="task" style="border-left:3px solid '+clFg+';background:'+clBg+'40"><div class="tck '+(t.st==='done'?'done':'')+'" onclick="toggleTask('+t.id+')"></div><div style="flex:1"><div class="ttl">'+t.ttl+'</div><div class="tmt">'+t.cl+' · '+fmtDate(t.due)+'</div>'+(isUrgent(t)?'<span class="rbadge">⏰ '+daysLeft(t.due)+'</span>':'')+'</div><div style="display:flex;gap:4px;align-items:center"><span class="pill '+(t.pr==='high'?'p-rose':'p-amber')+'">'+(t.pr==='high'?'Alta':'Media')+'</span><button class="btn btn-light btn-xs" onclick="editTask('+t.id+')">✏️</button><button class="btn btn-rose btn-xs" onclick="delTask('+t.id+')">✕</button></div></div>';
+
+  // Group client tasks by client
+  var cPend=DB.tasks.filter(function(t){return t.st==='pending';});
+  var cDone=DB.tasks.filter(function(t){return t.st==='done';});
+  var sPend=DB.studio.tasks.filter(function(t){return t.st==='pending';});
+
+  // Group by client
+  var byClient={};
+  DB.tasks.forEach(function(t){
+    var key=t.cl||'Sin cliente';
+    if(!byClient[key])byClient[key]=[];
+    byClient[key].push(t);
+  });
+
+  if(!DB.tasks.length&&!sPend.length){
+    html+='<div style="text-align:center;padding:40px;color:var(--text3);font-size:11px">Sin tareas. Agrega una con los botones de arriba.</div>';
   }
-  if(otherC.length){
-    html+='<div class="shdr" style="margin-top:14px;color:var(--text3)">Proximas semanas</div>';
-    for(var i=0;i<otherC.length;i++){var t=otherC[i];html+='<div class="task" style="opacity:.65"><div class="tck" onclick="toggleTask('+t.id+')"></div><div style="flex:1"><div class="ttl">'+t.ttl+'</div><div class="tmt">'+t.cl+' · '+fmtDate(t.due)+'</div></div><div style="display:flex;gap:4px;align-items:center"><span class="pill p-neutral">'+daysLeft(t.due)+'</span><button class="btn btn-light btn-xs" onclick="editTask('+t.id+')">✏️</button><button class="btn btn-rose btn-xs" onclick="delTask('+t.id+')">✕</button></div></div>';}
+
+  // This week label
+  var thisWeekTasks=cPend.filter(function(t){return isThisWeek(t.due);});
+  if(thisWeekTasks.length)html+='<div style="font-size:10px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Esta semana — '+thisWeekTasks.length+' tarea'+(thisWeekTasks.length!==1?'s':'')+'</div>';
+
+  // One card per client
+  Object.keys(byClient).forEach(function(clientName){
+    var tasks=byClient[clientName];
+    var cl=DB.clients.find(function(c){return c.co===clientName;});
+    var accent=cl?cc(cl,0):'var(--indigo)';
+    var accentBg=cl?cc(cl,1):'var(--indigo-bg)';
+    var pendingTasks=tasks.filter(function(t){return t.st==='pending';});
+    var doneTasks=tasks.filter(function(t){return t.st==='done';});
+
+    html+='<div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px;border-left:4px solid '+accent+'">';
+    // Client header
+    html+='<div style="background:'+accentBg+';padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">';
+    if(cl)html+='<div style="width:24px;height:24px;border-radius:6px;background:'+accent+';color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">'+cl.in+'</div>';
+    html+='<div style="font-size:12px;font-weight:700;color:var(--text)">'+clientName+'</div>';
+    html+='<div style="font-size:10px;color:var(--text3);margin-left:auto">'+pendingTasks.length+' pendiente'+(pendingTasks.length!==1?'s':'')+(doneTasks.length?' · '+doneTasks.length+' completada'+(doneTasks.length!==1?'s':''):'')+'</div>';
+    html+='</div>';
+    // All tasks inside
+    tasks.forEach(function(t){
+      var isWeek=isThisWeek(t.due);
+      var isDone=t.st==='done';
+      html+='<div style="padding:10px 14px;border-bottom:1px solid var(--bg2);display:flex;gap:10px;align-items:flex-start;background:'+(isDone?'var(--bg2)':'#fff')+';opacity:'+(isDone?'.6':'1')+'">';
+      html+='<div onclick="toggleTask('+t.id+')" style="width:16px;height:16px;border-radius:4px;border:2px solid '+(isDone?accent:'var(--border)')+';background:'+(isDone?accent:'transparent')+';cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center">';
+      if(isDone)html+='<span style="color:#fff;font-size:9px">✓</span>';
+      html+='</div>';
+      html+='<div style="flex:1">';
+      html+='<div style="font-size:11.5px;color:'+(isDone?'var(--text3)':'var(--text)')+';text-decoration:'+(isDone?'line-through':'none')+';line-height:1.4;word-break:break-word">'+t.ttl+'</div>';
+      html+='<div style="font-size:9.5px;color:var(--text3);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">';
+      html+='<span>📅 '+fmtDate(t.due)+'</span>';
+      if(isWeek&&!isDone)html+='<span style="background:'+accentBg+';color:'+accent+';border-radius:4px;padding:1px 6px;font-weight:600">Esta semana</span>';
+      html+='<span class="pill '+(t.pr==='high'?'p-rose':t.pr==='medium'?'p-amber':'p-neutral')+'">'+(t.pr==='high'?'Alta':t.pr==='medium'?'Media':'Baja')+'</span>';
+      html+='</div>';
+      html+='</div>';
+      html+='<div style="display:flex;gap:4px;flex-shrink:0">';
+      html+='<button class="btn btn-light btn-xs" onclick="editTask('+t.id+')">✏️</button>';
+      html+='<button class="btn btn-rose btn-xs" onclick="delTask('+t.id+')">✕</button>';
+      html+='</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+
+  // Studio tasks
+  if(sPend.length||DB.studio.tasks.filter(function(t){return t.st==='done';}).length){
+    html+='<div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px;border-left:4px solid var(--violet)">';
+    html+='<div style="background:var(--violet-bg);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">';
+    html+='<div style="font-size:12px;font-weight:700;color:var(--violet)">🏢 Estudio</div>';
+    html+='<div style="font-size:10px;color:var(--text3);margin-left:auto">'+sPend.length+' pendiente'+(sPend.length!==1?'s':'')+'</div>';
+    html+='</div>';
+    DB.studio.tasks.forEach(function(t){
+      var isDone=t.st==="done";
+      html+='<div style="padding:10px 14px;border-bottom:1px solid var(--bg2);display:flex;gap:10px;align-items:flex-start;background:'+(isDone?'var(--bg2)':'#fff')+';opacity:'+(isDone?'.6':'1')+'">';
+      html+='<div onclick="toggleStudioTask('+t.id+')" style="width:16px;height:16px;border-radius:4px;border:2px solid '+(isDone?'var(--violet)':'var(--border)')+';background:'+(isDone?'var(--violet)':'transparent')+';cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center">';
+      if(isDone)html+='<span style="color:#fff;font-size:9px">✓</span>';
+      html+='</div>';
+      html+='<div style="flex:1"><div style="font-size:11.5px;color:'+(isDone?'var(--text3)':'var(--text)')+';text-decoration:'+(isDone?'line-through':'none')+';line-height:1.4">'+t.ttl+'</div>';
+      html+='<div style="font-size:9.5px;color:var(--text3);margin-top:3px">'+t.cat+' · '+fmtDate(t.due)+'</div></div>';
+      html+='<button class="btn btn-rose btn-xs" onclick="delStudioTask('+t.id+')">✕</button>';
+      html+='</div>';
+    });
+    html+='</div>';
   }
-  html+='<div class="sep" style="margin:14px 0"></div>';
-  html+='<div class="shdr" style="color:var(--violet)">Estudio — Esta semana</div>';
-  var thisWeekS=sPend.filter(function(t){return isThisWeek(t.due);});
-  var otherS=sPend.filter(function(t){return !isThisWeek(t.due);});
-  if(!thisWeekS.length&&!otherS.length)html+='<div style="font-size:11px;color:var(--text3);padding:8px 0">Sin tareas del estudio pendientes.</div>';
-  for(var i=0;i<thisWeekS.length;i++){var t=thisWeekS[i];html+='<div class="studio-task" style="background:var(--violet-bg);border-left:3px solid var(--violet)"><div class="tck" onclick="toggleStudioTask('+t.id+')"></div><div style="flex:1"><div class="ttl" style="color:var(--violet)">'+t.ttl+'</div><div class="tmt">'+t.cat+' · '+fmtDate(t.due)+'</div></div><div style="display:flex;gap:4px"><span class="pill '+(t.pr==='high'?'p-rose':'p-amber')+'">'+(t.pr==='high'?'Alta':'Media')+'</span><button class="btn btn-rose btn-xs" onclick="delStudioTask('+t.id+')">✕</button></div></div>';}
-  if(otherS.length){html+='<div class="shdr" style="margin-top:10px;color:var(--text3)">Proximas semanas</div>';for(var i=0;i<otherS.length;i++){var t=otherS[i];html+='<div class="studio-task" style="opacity:.65"><div class="tck" onclick="toggleStudioTask('+t.id+')"></div><div style="flex:1"><div class="ttl" style="color:var(--text2)">'+t.ttl+'</div><div class="tmt">'+t.cat+'</div></div><button class="btn btn-rose btn-xs" onclick="delStudioTask('+t.id+')">✕</button></div>';}}
-  html+='</div></div></div>';
+
+  html+='</div></div>';
   return html;
 }
 
-function toggleTask(id){var t=DB.tasks.find(function(t){return t.id===id;});if(t)t.st=t.st==='done'?'pending':'done';buildNav();render();}
-function delTask(id){DB.tasks=DB.tasks.filter(function(t){return t.id!==id;});buildNav();render();}
-function editTask(id){
-  var t=DB.tasks.find(function(t){return t.id===id;});
-  if(!t)return;
-  var opts=DB.clients.map(function(c){return'<option'+(c.co===t.cl?' selected':'')+'>'+c.co+'</option>';}).join('');
-  showModal(
-    '<h3>Editar tarea</h3>'+
-    '<div style="margin-bottom:10px"><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Titulo</label>'+
-    '<input id="et-ti" value="'+t.ttl.replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--sans);font-size:12px;outline:none;color:var(--text)"/></div>'+
-    '<div style="margin-bottom:10px"><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Cliente</label>'+
-    '<select id="et-cl" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--sans);font-size:12px;outline:none;color:var(--text)">'+opts+'</select></div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
-    '<div><label style="font-size:10px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Fecha limite</label>'+
-    '<input type="date" id="et-due" value="'+t.due+'" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:11px;outline:none;color:var(--text)"/></div>'+
-    '<div>'+fsel('Prioridad','et-pr',[['high','Alta'],['medium','Media'],['low','Baja']])+'</div>'+
-    '</div>'+
-    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-rose btn-xs" onclick="delTask('+id+');closeM()">Eliminar</button><button class="btn btn-dark btn-sm" onclick="saveTaskEdit('+id+')">Guardar</button></div>'
-  );
-  setTimeout(function(){var p=document.getElementById('et-pr');if(p)p.value=t.pr||'medium';},0);
-}
-function saveTaskEdit(id){
-  var t=DB.tasks.find(function(t){return t.id===id;});
-  if(!t)return;
-  t.ttl=document.getElementById('et-ti').value||t.ttl;
-  t.cl=document.getElementById('et-cl').value||t.cl;
-  t.due=document.getElementById('et-due').value||t.due;
-  t.pr=document.getElementById('et-pr').value||t.pr;
-  closeM();buildNav();render();
+
+function rMiniCalSmall(){
+  var m=DB.calMonth,y=DB.calYear;
+  var mNames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate();
+  var hasEvent={};
+  DB.tasks.forEach(function(t){var d=new Date(t.due+'T12:00');if(d.getMonth()===m&&d.getFullYear()===y)hasEvent[d.getDate()]=(hasEvent[d.getDate()]||[]); hasEvent[d.getDate()].push({type:'task',done:t.st==='done'});});
+  DB.meetings.forEach(function(mt){var d=new Date(mt.date+'T12:00');if(d.getMonth()===m&&d.getFullYear()===y){if(!hasEvent[d.getDate()])hasEvent[d.getDate()]=[];hasEvent[d.getDate()].push({type:'meet'});}});
+  var cells='';
+  for(var i=0;i<fd;i++)cells+='<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"></div>';
+  for(var d=1;d<=dm;d++){
+    var dateStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(d<10?'0':'')+d;
+    var it=dateStr===TODAY;
+    var evs=hasEvent[d]||[];
+    var hasPending=evs.some(function(e){return e.type==='meet'||(e.type==='task'&&!e.done);});
+    var hasDone=evs.some(function(e){return e.type==='task'&&e.done;});
+    cells+='<div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;background:'+(it?'var(--indigo)':evs.length?'var(--bg2)':'transparent')+';cursor:'+(evs.length?'pointer':'default')+'">';
+    cells+='<div style="font-size:10px;font-weight:'+(it||hasPending?'700':'400')+';color:'+(it?'#fff':hasPending?'var(--indigo)':'var(--text3)')+'">'+d+'</div>';
+    if(evs.length){
+      cells+='<div style="display:flex;gap:2px;margin-top:2px">';
+      if(hasPending)cells+='<div style="width:4px;height:4px;border-radius:50%;background:'+(it?'#fff':'var(--indigo)')+'"></div>';
+      if(hasDone)cells+='<div style="width:4px;height:4px;border-radius:50%;background:var(--text3)"></div>';
+      cells+='</div>';
+    }
+    cells+='</div>';
+  }
+  return '<div style="background:#fff">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+    +'<button onclick="DB.calMonth=DB.calMonth>0?DB.calMonth-1:11;if(DB.calMonth===11)DB.calYear--;render()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px">&larr;</button>'
+    +'<div style="font-size:10px;font-weight:700;color:var(--text)">'+mNames[m]+' '+y+'</div>'
+    +'<button onclick="DB.calMonth=DB.calMonth<11?DB.calMonth+1:0;if(DB.calMonth===0)DB.calYear++;render()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px">&rarr;</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">'
+    +['D','L','M','M','J','V','S'].map(function(d){return'<div style="text-align:center;font-size:8px;font-weight:700;color:var(--text3);padding:2px 0">'+d+'</div>';}).join('')
+    +cells+'</div></div>';
 }
 
 function rMiniCal(){
@@ -1667,93 +1735,172 @@ function rSchedule(){
   var m=DB.calMonth,y=DB.calYear;
   var mNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate();
-  var tByD={},mByD={};
-  DB.tasks.filter(function(t){return t.st==='pending';}).forEach(function(t){var d=new Date(t.due);if(d.getMonth()===m&&d.getFullYear()===y){var k=d.getDate();if(!tByD[k])tByD[k]=[];tByD[k].push(t);}});
-  DB.meetings.forEach(function(mt){var d=new Date(mt.date);if(d.getMonth()===m&&d.getFullYear()===y){var k=d.getDate();if(!mByD[k])mByD[k]=[];mByD[k].push(mt);}});
+
+  // Build event maps
+  var evByD={};
+  function addEv(dateStr,ev){
+    if(!evByD[dateStr])evByD[dateStr]=[];
+    evByD[dateStr].push(ev);
+  }
+
+  // All meetings (no filter by date — show everything)
+  DB.meetings.forEach(function(mt){
+    addEv(mt.date,{type:'meet',id:mt.id,ttl:mt.ttl,time:mt.time,cl:mt.cl,done:false,auto:mt.auto,link:mt.link});
+  });
+  // All tasks (show all, done = muted)
+  DB.tasks.forEach(function(t){
+    addEv(t.due,{type:'task',id:t.id,ttl:t.ttl,time:'',cl:t.cl,done:t.st==='done',pr:t.pr});
+  });
+  // Notes
+  (DB.notes||[]).forEach(function(n){
+    addEv(n.date,{type:'note',id:n.id,ttl:n.ttl,time:n.time||'',cl:'',done:false});
+  });
+
   var cells='';
-  for(var i=0;i<fd;i++)cells+='<div class="cal-d om"><div class="cal-dn"></div></div>';
+  for(var i=0;i<fd;i++)cells+='<div class="cal-d om"></div>';
   for(var d=1;d<=dm;d++){
-    var dateStr=y+'-'+(m+1<10?'0':'')+(m+1)+'-'+(d<10?'0':'')+d;
-    var it=(dateStr===TODAY);
-    var ts=tByD[d]||[],ms=mByD[d]||[];
-    var isCard=(d===22);
-    cells+='<div class="cal-d '+(it?'today':'')+'" style="'+(it?'background:var(--indigo-bg);':'')+ '">';
-    cells+='<div class="cal-dn">'+(it?'<span style="background:var(--indigo);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">'+d+'</span>':'<span>'+d+'</span>')+'</div>';
-    if(isCard)cells+='<div class="cal-ev" style="background:var(--amber-bg);color:var(--text2);border:1px solid var(--amber-bd)" title="Pago mensual de tarjeta de credito">💳 Pagar tarjeta</div>';
-    for(var j=0;j<ms.length;j++){
-      var mtEv=ms[j];
-      var shortTitle=mtEv.ttl.length>16?mtEv.ttl.substring(0,14)+'…':mtEv.ttl;
-      var mtCl2=DB.clients.find(function(x){return x.co===mtEv.cl;});var mtBg=mtCl2?cc(mtCl2,1):(mtEv.type==='google'?'#e8f5e9':mtEv.type==='zoom'?'#eef4ff':'var(--violet-bg)');var mtFg=mtCl2?cc(mtCl2,0):(mtEv.type==='google'?'#00832d':mtEv.type==='zoom'?'#2D8CFF':'var(--violet)');cells+='<div class="cal-ev" onclick="editMeet('+mtEv.id+')" style="cursor:pointer;background:'+mtBg+';color:'+mtFg+'" title="'+mtEv.ttl+' · '+mtEv.time+(mtEv.desc?' — '+mtEv.desc:'')+' (click para editar)">📹 '+shortTitle+'</div>';
+    var dateStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(d<10?'0':'')+d;
+    var it=dateStr===TODAY;
+    var isSel=dateStr===DB.selDate;
+    var evs=evByD[dateStr]||[];
+    cells+='<div class="cal-d" onclick="DB.selDate=DB.selDate===\''+dateStr+'\' ?null:\'' +dateStr+'\';render()" style="cursor:pointer;'+(it?'background:var(--indigo-bg);':'')+(isSel&&!it?'outline:2px solid var(--indigo);outline-offset:-2px;background:var(--violet-bg);':'')+'">';
+    // Day number
+    cells+='<div class="cal-dn">'+(it?'<span style="background:var(--indigo);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+d+'</span>':'<span style="font-size:11px">'+d+'</span>')+'</div>';
+    // Events
+    for(var j=0;j<evs.length;j++){
+      var ev=evs[j];
+      var cl=DB.clients.find(function(c){return c.co===ev.cl;});
+      var evBg=ev.done?'var(--bg3)':ev.type==='note'?'var(--amber-bg)':cl?cc(cl,1):'var(--indigo-bg)';
+      var evFg=ev.done?'var(--text3)':ev.type==='note'?'#92400e':cl?cc(cl,0):'var(--indigo)';
+      var icon=ev.type==='meet'?'📹':ev.type==='note'?'📝':'✓ ';
+      var shortTtl=ev.ttl.length>14?ev.ttl.substring(0,13)+'…':ev.ttl;
+      cells+='<div class="cal-ev" onclick="event.stopPropagation();'+(ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':'editTask('+ev.id+')')+'" style="background:'+evBg+';color:'+evFg+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:pointer" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+icon+shortTtl+'</div>';
     }
-    for(var j=0;j<ts.length;j++){
-      var tEv=ts[j];var cl2=DB.clients.find(function(c){return c.co===tEv.cl;});
-      var shortTtl=tEv.ttl.length>13?tEv.ttl.substring(0,12)+'…':tEv.ttl;
-      cells+='<div class="cal-ev" onclick="editTask('+tEv.id+')" style="cursor:pointer;background:'+(cl2?cc(cl2,1):'var(--bg3)')+';color:'+(cl2?cc(cl2,0):'var(--text)')+'" title="'+tEv.ttl+' (click para editar)">'+shortTtl+'</div>';
-    }
-    cells+='<div class="cal-add" onclick="openMeetModal(\'\',\''+dateStr+'\')">+</div>';
+    cells+='<div class="cal-add" onclick="event.stopPropagation();openAgendaModal(\''+dateStr+'\')">+</div>';
     cells+='</div>';
   }
-  var html='<div class="topbar"><div class="tb-t">Agenda</div><button class="btn btn-light btn-sm" onclick="openMeetModal(\'\',\'\')">+ Reunion</button></div>';
-  html+='<div class="content">';
+
+  var html='<div class="topbar"><div class="tb-t">Agenda</div><div style="display:flex;gap:6px"><button class="btn btn-light btn-sm" onclick="openAgendaModal(\'\')">+ Agregar</button></div></div>';
+  html+='<div class="content" style="padding:0"><div style="display:flex;height:100%;overflow:hidden">';
+
+  // Full calendar
+  html+='<div style="flex:1;overflow-y:auto;padding:14px 16px">';
   html+='<div class="cal-big">';
-  html+='<div class="cal-big-h"><button class="btn btn-light btn-xs" onclick="prevMonth()">&larr;</button><div class="cal-big-t" style="text-align:center">'+mNames[m]+' '+y+'</div><button class="btn btn-light btn-xs" onclick="nextMonth()">&rarr;</button><button class="btn btn-light btn-xs" onclick="DB.calMonth=new Date().getMonth();DB.calYear=new Date().getFullYear();render()">Hoy</button></div>';
+  html+='<div class="cal-big-h"><button class="btn btn-light btn-xs" onclick="prevMonth()">&larr;</button><div class="cal-big-t">'+mNames[m]+' '+y+'</div><button class="btn btn-light btn-xs" onclick="nextMonth()">&rarr;</button><button class="btn btn-light btn-xs" onclick="DB.calMonth=new Date().getMonth();DB.calYear=new Date().getFullYear();render()">Hoy</button></div>';
   html+='<div class="cal-big-g">'+['Dom','Lun','Mar','Mie','Jue','Vie','Sab'].map(function(d){return'<div class="cal-dow">'+d+'</div>';}).join('')+cells+'</div>';
   html+='</div>';
-  var sortedMeets=DB.meetings.slice().sort(function(a,b){return a.date>b.date?1:a.date<b.date?-1:a.time>b.time?1:-1;});
-  var upcomingM=sortedMeets.filter(function(m2){return m2.date>=TODAY;});
-  var meetsToShow=upcomingM.length?upcomingM:sortedMeets;
-  // If date selected, show that day's events prominently
+
+  // Legend
+  html+='<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text3)"><div style="width:10px;height:10px;border-radius:2px;background:var(--indigo-bg)"></div>Reunión</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text3)"><div style="width:10px;height:10px;border-radius:2px;background:var(--bg3)"></div>Tarea</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text3)"><div style="width:10px;height:10px;border-radius:2px;background:var(--amber-bg)"></div>Nota</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text3)"><div style="width:10px;height:10px;border-radius:2px;background:var(--bg3);opacity:.5"></div>Completado</div>';
+  html+='</div>';
+  html+='</div>';
+
+  // RIGHT panel — selected day detail OR upcoming list
+  html+='<div style="width:320px;flex-shrink:0;border-left:1px solid var(--border);overflow-y:auto;background:#fff">';
+
   if(DB.selDate){
-    var selMeets=DB.meetings.filter(function(m){return m.date===DB.selDate;});
-    var selTasks=DB.tasks.filter(function(t){return t.due===DB.selDate&&t.st==='pending';});
-    if(selMeets.length||selTasks.length){
-      html+='<div style="margin-top:16px;background:var(--indigo-bg);border:1.5px solid var(--indigo-bd);border-radius:10px;padding:12px 14px;margin-bottom:12px">';
-      html+='<div style="font-size:11px;font-weight:700;color:var(--indigo);margin-bottom:8px">📅 '+fmtDate(DB.selDate)+' — '+(selMeets.length+selTasks.length)+' evento'+(selMeets.length+selTasks.length!==1?'s':'')+'</div>';
-      for(var si=0;si<selMeets.length;si++){var sm=selMeets[si];var smCl=DB.clients.find(function(x){return x.co===sm.cl;});html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--indigo-bd)">';html+='<div style="font-size:10px;font-weight:700;background:var(--indigo);color:#fff;border-radius:4px;padding:2px 6px">'+sm.time+'</div>';html+='<div style="flex:1;font-size:11px;font-weight:500">'+sm.ttl+'</div>';html+='<button class="btn btn-light btn-xs" onclick="editMeet('+sm.id+')">✏️</button><button class="btn btn-rose btn-xs" onclick="delMeet('+sm.id+')">✕</button>';html+='</div>';}
-      for(var si=0;si<selTasks.length;si++){var st2=selTasks[si];html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0"><div style="font-size:10px;background:var(--bg3);color:var(--text2);border-radius:4px;padding:2px 6px">Tarea</div><div style="flex:1;font-size:11px">'+st2.ttl+'</div><button class="btn btn-rose btn-xs" onclick="delTask('+st2.id+')">✕</button></div>';}
-      html+='<button class="btn btn-light btn-xs" style="margin-top:8px" onclick="DB.selDate=null;render()">✕ Cerrar</button>';
+    // Show selected day detail
+    var selEvs=evByD[DB.selDate]||[];
+    html+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">';
+    html+='<div style="font-size:12px;font-weight:700;color:var(--indigo)">📅 '+fmtDate(DB.selDate)+'</div>';
+    html+='<button class="btn btn-light btn-xs" onclick="DB.selDate=null;render()">✕</button>';
+    html+='</div>';
+    html+='<div style="padding:10px 14px">';
+    html+='<button class="btn btn-dark btn-sm" style="width:100%;margin-bottom:10px" onclick="openAgendaModal(\''+DB.selDate+'\')">+ Agregar evento aqui</button>';
+    if(!selEvs.length)html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px 0">Sin eventos este dia</div>';
+    selEvs.forEach(function(ev){
+      var cl=DB.clients.find(function(c){return c.co===ev.cl;});
+      var accent=cl?cc(cl,0):ev.type==='note'?'#92400e':'var(--indigo)';
+      html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
+      html+='<div style="display:flex;align-items:flex-start;gap:6px">';
+      html+='<div style="font-size:9px;background:'+(ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='note'?'#92400e':'var(--text2)')+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+(ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':'Tarea')+'</div>';
+      html+='<div style="flex:1">';
+      html+='<div style="font-size:11.5px;font-weight:600;color:'+(ev.done?'var(--text3)':'var(--text)')+';text-decoration:'+(ev.done?'line-through':'none')+';line-height:1.4;word-break:break-word">'+ev.ttl+'</div>';
+      if(ev.cl)html+='<div style="font-size:9.5px;color:var(--text3);margin-top:2px">'+ev.cl+'</div>';
+      if(ev.time)html+='<div style="font-size:9.5px;color:var(--text3)">🕐 '+ev.time+'</div>';
       html+='</div>';
-    }
-  }
-  html+='<div class="shdr" style="margin-top:8px">Proximas reuniones ('+upcomingM.length+')</div>';
-  html+='<div style="display:flex;flex-direction:column;gap:8px">';
-  for(var i=0;i<meetsToShow.length;i++){
-    var mt=meetsToShow[i];
-    var isToday2=mt.date===TODAY;
-    var mtCl3=DB.clients.find(function(x){return x.co===mt.cl;});
-    var mtAccent=mtCl3?cc(mtCl3,0):'var(--indigo)';
-    var mtAccentBg=mtCl3?cc(mtCl3,1):'var(--indigo-bg)';
-    html+='<div class="meet" style="flex-direction:column;gap:6px;border-left:3px solid '+mtAccent+';background:'+mtAccentBg+'30">';
-    html+='<div style="display:flex;gap:10px;align-items:flex-start">';
-    html+='<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">';
-    html+='<div style="font-size:8.5px;color:var(--text3);font-family:var(--mono)">'+fmtDate(mt.date)+'</div>';
-    html+='<div style="background:'+mtAccent+';color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;font-family:var(--mono)">'+mt.time+'</div>';
+      html+='<div style="display:flex;gap:3px;flex-shrink:0">';
+      if(ev.type==='task')html+='<button class="btn btn-light btn-xs" onclick="toggleTask('+ev.id+')">'+(ev.done?'↩':'✓')+'</button>';
+      html+='<button class="btn btn-light btn-xs" onclick="'+(ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':'editTask('+ev.id+')')+'">✏️</button>';
+      html+='<button class="btn btn-rose btn-xs" onclick="'+(ev.type==='meet'?'delMeet('+ev.id+')':ev.type==='note'?'delNote('+ev.id+')':'delTask('+ev.id+')')+'">✕</button>';
+      html+='</div>';
+      html+='</div>';
+      html+='</div>';
+    });
     html+='</div>';
-    html+='<div style="flex:1">';
-    html+='<div class="mtl">'+mt.ttl+(isToday2?' <span style="font-size:8px;background:var(--indigo);color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle">HOY</span>':'')+'</div>';
-    html+='<div class="mcl">'+mt.cl+' · '+mt.dur+(mt.type?' · '+(mt.type==='zoom'?'Zoom':'Google Meet'):'')+'</div>';
-    if(mt.desc)html+='<div style="font-size:9.5px;color:var(--text3);margin-top:3px;line-height:1.4">'+mt.desc+'</div>';
+  } else {
+    // Show upcoming events list
+    var allEvs=[];
+    DB.meetings.forEach(function(mt){allEvs.push({date:mt.date,time:mt.time,type:'meet',id:mt.id,ttl:mt.ttl,cl:mt.cl,done:false,desc:mt.desc,link:mt.link,clientEmail:mt.clientEmail,inviteSent:mt.inviteSent,inviteSentDate:mt.inviteSentDate});});
+    DB.tasks.forEach(function(t){allEvs.push({date:t.due,time:'',type:'task',id:t.id,ttl:t.ttl,cl:t.cl,done:t.st==="done",pr:t.pr});});
+    (DB.notes||[]).forEach(function(n){allEvs.push({date:n.date,time:n.time||'',type:'note',id:n.id,ttl:n.ttl,cl:'',done:false});});
+    allEvs.sort(function(a,b){return a.date>b.date?1:a.date<b.date?-1:a.time>b.time?1:-1;});
+    var upcoming=allEvs.filter(function(e){return e.date>=TODAY&&!e.done;});
+    var past=allEvs.filter(function(e){return e.date<TODAY||e.done;});
+
+    html+='<div style="padding:10px 14px;border-bottom:1px solid var(--border)">';
+    html+='<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px">Próximos eventos ('+upcoming.length+')</div>';
+    html+='<div style="font-size:9.5px;color:var(--text3)">Click en un día del calendario para ver detalles</div>';
     html+='</div>';
-    if(mt.auto)html+='<span style="font-size:8px;background:var(--indigo-bg);color:var(--indigo);border:1px solid var(--indigo-bd);border-radius:4px;padding:1px 5px;white-space:nowrap;height:fit-content">auto</span>';
-    html+='</div>';
-    html+='<div style="display:flex;gap:5px;align-items:center;padding-top:6px;border-top:1px solid var(--border);flex-wrap:wrap">';
-    if(mt.link)html+='<a href="'+mt.link+'" target="_blank" class="btn btn-light btn-xs">🔗 Unirse</a>';
-    if(mt.clientEmail){
-      if(mt.inviteSent){
-        html+='<span style="font-size:9.5px;color:var(--indigo);font-weight:600;padding:3px 8px;background:var(--indigo-bg);border:1px solid var(--indigo-bd);border-radius:5px">✓ Invite enviado '+fmtShort(mt.inviteSentDate)+'</span>';
-        html+='<button class="btn btn-light btn-xs" onclick="mt_'+mt.id+'_resend()" style="font-size:9px" onclick="DB.meetings.find(function(m){return m.id==='+mt.id+';}).inviteSent=false;render()">Reenviar</button>';
+    html+='<div style="padding:10px 14px">';
+
+    upcoming.forEach(function(ev){
+      var cl=DB.clients.find(function(c){return c.co===ev.cl;});
+      var accent=cl?cc(cl,0):ev.type==='note'?'#92400e':'var(--indigo)';
+      var isToday2=ev.date===TODAY;
+      html+='<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bg2);align-items:flex-start">';
+      html+='<div style="text-align:center;flex-shrink:0;width:32px">';
+      html+='<div style="font-size:8.5px;color:var(--text3)">'+(isToday2?'HOY':fmtDate(ev.date).split(' ')[0])+'</div>';
+      html+='<div style="font-size:10px;font-weight:700;color:'+(isToday2?'var(--indigo)':'var(--text)')+'">'+fmtDate(ev.date).split(' ')[1]+'</div>';
+      html+='</div>';
+      html+='<div style="width:2px;background:'+accent+';border-radius:2px;align-self:stretch;flex-shrink:0"></div>';
+      html+='<div style="flex:1;min-width:0">';
+      html+='<div style="font-size:10.5px;font-weight:600;color:var(--text);line-height:1.3;word-break:break-word">'+ev.ttl+'</div>';
+      if(ev.cl)html+='<div style="font-size:9px;color:var(--text3)">'+ev.cl+'</div>';
+      if(ev.time)html+='<div style="font-size:9px;color:var(--text3)">'+ev.time+'</div>';
+      html+='</div>';
+      html+='<div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">';
+      if(ev.type==='meet'){
+        html+='<button class="btn btn-light btn-xs" onclick="editMeet('+ev.id+')">✏️</button>';
+        if(ev.clientEmail){
+          if(ev.inviteSent)html+='<span style="font-size:8px;color:var(--indigo)">✓ inv</span>';
+          else html+='<button class="btn btn-light btn-xs" style="font-size:8px" onclick="saveDraftEmail('+ev.id+')">📧</button>';
+        }
+      } else if(ev.type==='task'){
+        html+='<button class="btn btn-light btn-xs" onclick="toggleTask('+ev.id+')">✓</button>';
+        html+='<button class="btn btn-light btn-xs" onclick="editTask('+ev.id+')">✏️</button>';
       } else {
-        html+='<button id="draft-btn-'+mt.id+'" class="btn btn-light btn-xs" onclick="saveDraftEmail('+mt.id+')">📧 Invite</button>';
+        html+='<button class="btn btn-light btn-xs" onclick="editNote('+ev.id+')">✏️</button>';
       }
+      html+='<button class="btn btn-rose btn-xs" onclick="'+(ev.type==='meet'?'delMeet('+ev.id+')':ev.type==='task'?'delTask('+ev.id+')':'delNote('+ev.id+')')+'">✕</button>';
+      html+='</div>';
+      html+='</div>';
+    });
+
+    if(!upcoming.length)html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px 0">Sin eventos próximos</div>';
+
+    if(past.length){
+      html+='<div style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">Completados / Pasados</div>';
+      past.slice(0,10).forEach(function(ev){
+        html+='<div style="display:flex;gap:6px;padding:5px 0;border-bottom:1px solid var(--bg2);opacity:.5;align-items:center">';
+        html+='<div style="font-size:9px;color:var(--text3);width:28px;flex-shrink:0">'+fmtDate(ev.date).split(' ').slice(0,2).join(' ')+'</div>';
+        html+='<div style="font-size:10px;color:var(--text3);flex:1;text-decoration:line-through;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ev.ttl+'</div>';
+        if(ev.type==='task')html+='<button class="btn btn-light btn-xs" onclick="toggleTask('+ev.id+')" style="font-size:8px">↩</button>';
+        html+='</div>';
+      });
     }
-    if(mt.inviteUrl&&mt.clientEmail&&!mt.inviteSent)html+='<a href="'+mt.inviteUrl+'" class="btn btn-light btn-xs">✉ Mailto</a>';
-    html+='<button class="btn btn-light btn-xs" onclick="editMeet('+mt.id+')">✏️ Editar</button>';
-    html+='<button class="btn btn-rose btn-xs" onclick="delMeet('+mt.id+')">✕</button>';
-    html+='</div></div>';
+    html+='</div>';
   }
+  html+='</div>';
+
   html+='</div></div>';
   return html;
 }
+
 
 function prevMonth(){DB.calMonth--;if(DB.calMonth<0){DB.calMonth=11;DB.calYear--;}render();}
 function nextMonth(){DB.calMonth++;if(DB.calMonth>11){DB.calMonth=0;DB.calYear++;}render();}
@@ -2804,7 +2951,7 @@ function saveToStorage(){
     var save={
       clients:DB.clients,potentials:DB.potentials,tasks:DB.tasks,
       meetings:DB.meetings,posts:DB.posts,monthly:DB.monthly,
-      studio:DB.studio,tlExpand:DB.tlExpand||{}
+      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[]
     };
     localStorage.setItem('studioOS_v1',JSON.stringify(save));
   }catch(e){console.warn('Save failed:',e);}
@@ -2869,6 +3016,7 @@ function loadFromStorage(){
     if(save.monthly)DB.monthly=save.monthly;
     if(save.studio)DB.studio=save.studio;
     if(save.tlExpand)DB.tlExpand=save.tlExpand;
+    if(save.notes)DB.notes=save.notes;
     var gUser=localStorage.getItem('studioGmailUser');
     var gPw=localStorage.getItem('studioGmailPw');
     var ejsSvc=localStorage.getItem('studioEjsService');
@@ -2953,6 +3101,63 @@ function saveEditClient(id){
   c.in=newCo.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
   c.ups.unshift({t:'Datos del cliente actualizados',d:'Hoy',c:cc(c,0)});
   closeM();buildNav();render();
+}
+function openAgendaModal(dateStr){
+  showModal(
+    '<h3>Agregar a la agenda</h3>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px">'+
+    '<button onclick="closeM();openMeetModal(\'\',\''+dateStr+'\')" style="background:var(--indigo-bg);border:1.5px solid var(--indigo-bd);border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">📹</div><div style="font-size:11px;font-weight:700;color:var(--indigo)">Reunión</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Google Meet o Zoom</div></button>'+
+    '<button onclick="closeM();openTaskModalDate(\''+dateStr+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">✅</div><div style="font-size:11px;font-weight:700;color:var(--text)">Tarea</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Pendiente o recordatorio</div></button>'+
+    '<button onclick="closeM();openNoteModal(\''+dateStr+'\')" style="background:var(--amber-bg);border:1.5px solid var(--amber-bd);border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">📝</div><div style="font-size:11px;font-weight:700;color:#92400e">Nota</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Apunte o recordatorio libre</div></button>'+
+    '</div>'+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button></div>'
+  );
+}
+function openTaskModalDate(dateStr){
+  openTaskModal();
+  setTimeout(function(){var el=document.getElementById('t-due');if(el&&dateStr){el.type='date';el.value=dateStr;}},50);
+}
+function openNoteModal(dateStr){
+  showModal(
+    '<h3>Nueva nota</h3>'+
+    fg('Titulo / Contenido','n-ttl','Ej. Llamar a cliente, idea de post...','')+
+    fg('Fecha','n-dt','','date')+
+    fg('Hora (opcional)','n-tm','','time')+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveNote()">Guardar nota</button></div>'
+  );
+  setTimeout(function(){var el=document.getElementById('n-dt');if(el&&dateStr){el.type='date';el.value=dateStr;}},50);
+}
+function saveNote(){
+  var ttl=(document.getElementById('n-ttl')||{}).value||'';
+  var dt=(document.getElementById('n-dt')||{}).value||TODAY;
+  var tm=(document.getElementById('n-tm')||{}).value||'';
+  if(!ttl){alert('Agrega un titulo.');return;}
+  if(!DB.notes)DB.notes=[];
+  DB.notes.push({id:Date.now(),ttl:ttl,date:dt,time:tm});
+  closeM();saveToStorage();render();
+}
+function editNote(id){
+  var n=(DB.notes||[]).find(function(x){return x.id===id;});
+  if(!n)return;
+  showModal(
+    '<h3>Editar nota</h3>'+
+    '<div class="fg"><label class="fl">Titulo</label><input class="fi" id="en-ttl" value="'+n.ttl.replace(/"/g,'&quot;')+'"/></div>'+
+    '<div class="fg"><label class="fl">Fecha</label><input class="fi" id="en-dt" type="date" value="'+n.date+'"/></div>'+
+    '<div class="fg"><label class="fl">Hora</label><input class="fi" id="en-tm" type="time" value="'+(n.time||'')+'"/></div>'+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-rose btn-sm" onclick="delNote('+id+')">Eliminar</button><button class="btn btn-dark btn-sm" onclick="saveNoteEdit('+id+')">Guardar</button></div>'
+  );
+}
+function saveNoteEdit(id){
+  var n=(DB.notes||[]).find(function(x){return x.id===id;});
+  if(!n)return;
+  n.ttl=document.getElementById('en-ttl').value||n.ttl;
+  n.date=document.getElementById('en-dt').value||n.date;
+  n.time=document.getElementById('en-tm').value||n.time;
+  closeM();saveToStorage();render();
+}
+function delNote(id){
+  DB.notes=(DB.notes||[]).filter(function(x){return x.id!==id;});
+  closeM();saveToStorage();render();
 }
 function openMeetModal(cl,dateStr){
   var opts=DB.clients.map(function(c){return'<option'+(c.co===cl?' selected':'')+'>'+c.co+'</option>';}).join('');
