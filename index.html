@@ -903,7 +903,33 @@ function delClient(id){
   buildNav();render();
 }
 
-function markDep(id){var c=DB.clients.find(function(x){return x.id===id;});if(!c)return;var h=Math.round(c.budget/2);c.dep=true;c.paid+=h;c.pending-=h;if(c.st==='pending')c.st='active';c.ups.unshift({t:'50% adelanto recibido - $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});saveToStorage();render();}
+function markDep(id){
+  var c=DB.clients.find(function(x){return x.id===id;});
+  if(!c)return;
+  var h=Math.round(c.budget/2);
+  c.dep=true;c.paid+=h;c.pending-=h;
+  if(c.st==='pending')c.st='active';
+  c.ups.unshift({t:'50% adelanto recibido — $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});
+  // Update monthly revenue
+  var curM=new Date(TODAY).getMonth();
+  var mNames=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var mEntry=DB.monthly.find(function(m){return m.m===mNames[curM];});
+  if(mEntry)mEntry.rev+=h;
+  saveToStorage();render();
+}
+function markFinal(id){
+  var c=DB.clients.find(function(x){return x.id===id;});
+  if(!c||c.pending<=0)return;
+  var h=c.pending;
+  c.paid+=h;c.pending=0;c.st='active';
+  c.ups.unshift({t:'Pago final recibido — $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});
+  // Update monthly revenue
+  var curM=new Date(TODAY).getMonth();
+  var mNames=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var mEntry=DB.monthly.find(function(m){return m.m===mNames[curM];});
+  if(mEntry)mEntry.rev+=h;
+  saveToStorage();render();
+}
 function selC(id){DB.selClient=DB.clients.find(function(c){return c.id===id;});if(DB.view==='clients')render();}
 
 function rDetail(c){
@@ -955,6 +981,34 @@ function rDetail(c){
   html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="color:var(--text3)">Pactado</span><span style="font-weight:500">$'+c.budget.toLocaleString()+'</span></div>';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="color:var(--text3)">Cobrado</span><span style="display:flex;align-items:center;gap:4px;color:var(--sky);font-weight:500">'+icn('pay_ok',14)+' $'+c.paid.toLocaleString()+'</span></div>';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="color:var(--text3)">Pendiente</span><span style="display:flex;align-items:center;gap:4px;color:'+(c.pending>0?'var(--orange)':'var(--text3)')+';font-weight:500">'+(c.pending>0?icn('pay_pending',14):'')+' $'+c.pending.toLocaleString()+'</span></div>';
+
+  // Payment action buttons
+  var dep=Math.round(c.budget*0.5);
+  var final=c.budget-dep;
+  html+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">';
+  if(!c.dep){
+    html+='<button onclick="markDep('+c.id+')" style="width:100%;background:var(--indigo-bg);border:1.5px solid var(--indigo-bd);border-radius:8px;padding:9px 12px;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;justify-content:space-between">';
+    html+='<span style="font-size:11px;font-weight:600;color:var(--indigo)">✓ Recibí 50% depósito</span>';
+    html+='<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--indigo)">+$'+dep.toLocaleString()+'</span>';
+    html+='</button>';
+  } else {
+    html+='<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px">';
+    html+='<span style="font-size:16px">✅</span>';
+    html+='<span style="font-size:11px;color:#16a34a;font-weight:600">50% depósito recibido — $'+dep.toLocaleString()+'</span>';
+    html+='</div>';
+  }
+  if(c.dep&&c.pending>0){
+    html+='<button onclick="markFinal('+c.id+')" style="width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;justify-content:space-between">';
+    html+='<span style="font-size:11px;font-weight:600;color:var(--text)">✓ Recibí pago final</span>';
+    html+='<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">+$'+final.toLocaleString()+'</span>';
+    html+='</button>';
+  } else if(c.pending===0){
+    html+='<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px">';
+    html+='<span style="font-size:16px">✅</span>';
+    html+='<span style="font-size:11px;color:#16a34a;font-weight:600">Proyecto pagado al 100%</span>';
+    html+='</div>';
+  }
+  html+='</div>';
   html+='<div style="font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin:12px 0 6px">Avance Sem '+wp.we+'/'+c.wks+'</div>';
   html+='<div style="font-size:10px;color:var(--text2);margin-bottom:5px">'+wp.cp+'% real vs '+wp.ep+'% esperado</div>';
   html+='<div style="display:flex;gap:2px;margin-bottom:4px">';
