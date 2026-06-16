@@ -374,7 +374,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -619,6 +619,10 @@ function buildNav(){
   html+='</div>';
   html+='<div style="padding:10px 12px;border-top:1px solid var(--border);margin-top:4px">';
   html+='<div id="save-ind" style="font-size:9px;color:var(--text3);margin-bottom:5px">💾 Auto-guardado activo</div>';
+  html+='<div style="display:flex;gap:4px;margin-bottom:5px">';
+  html+='<button onclick="exportBackup()" style="flex:1;background:var(--indigo-bg);border:1px solid var(--indigo-bd);color:var(--indigo);font-family:var(--sans);font-size:8.5px;font-weight:600;padding:4px 6px;border-radius:5px;cursor:pointer">⬇ Backup</button>';
+  html+='<button onclick="importBackup()" style="flex:1;background:var(--bg2);border:1px solid var(--border);color:var(--text2);font-family:var(--sans);font-size:8.5px;font-weight:600;padding:4px 6px;border-radius:5px;cursor:pointer">⬆ Restaurar</button>';
+  html+='</div>';
   html+='<button onclick="clearStorage()" style="background:none;border:none;font-family:var(--sans);font-size:9px;color:var(--text3);cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0">Restablecer datos de ejemplo</button>';
   html+='</div>';
   document.getElementById('nav-w').innerHTML=html;
@@ -1681,7 +1685,20 @@ function rSchedule(){
   var sortedMeets=DB.meetings.slice().sort(function(a,b){return a.date>b.date?1:a.date<b.date?-1:a.time>b.time?1:-1;});
   var upcomingM=sortedMeets.filter(function(m2){return m2.date>=TODAY;});
   var meetsToShow=upcomingM.length?upcomingM:sortedMeets;
-  html+='<div class="shdr" style="margin-top:16px">Proximas reuniones ('+upcomingM.length+')</div>';
+  // If date selected, show that day's events prominently
+  if(DB.selDate){
+    var selMeets=DB.meetings.filter(function(m){return m.date===DB.selDate;});
+    var selTasks=DB.tasks.filter(function(t){return t.due===DB.selDate&&t.st==='pending';});
+    if(selMeets.length||selTasks.length){
+      html+='<div style="margin-top:16px;background:var(--indigo-bg);border:1.5px solid var(--indigo-bd);border-radius:10px;padding:12px 14px;margin-bottom:12px">';
+      html+='<div style="font-size:11px;font-weight:700;color:var(--indigo);margin-bottom:8px">📅 '+fmtDate(DB.selDate)+' — '+(selMeets.length+selTasks.length)+' evento'+(selMeets.length+selTasks.length!==1?'s':'')+'</div>';
+      for(var si=0;si<selMeets.length;si++){var sm=selMeets[si];var smCl=DB.clients.find(function(x){return x.co===sm.cl;});html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--indigo-bd)">';html+='<div style="font-size:10px;font-weight:700;background:var(--indigo);color:#fff;border-radius:4px;padding:2px 6px">'+sm.time+'</div>';html+='<div style="flex:1;font-size:11px;font-weight:500">'+sm.ttl+'</div>';html+='<button class="btn btn-light btn-xs" onclick="editMeet('+sm.id+')">✏️</button><button class="btn btn-rose btn-xs" onclick="delMeet('+sm.id+')">✕</button>';html+='</div>';}
+      for(var si=0;si<selTasks.length;si++){var st2=selTasks[si];html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0"><div style="font-size:10px;background:var(--bg3);color:var(--text2);border-radius:4px;padding:2px 6px">Tarea</div><div style="flex:1;font-size:11px">'+st2.ttl+'</div><button class="btn btn-rose btn-xs" onclick="delTask('+st2.id+')">✕</button></div>';}
+      html+='<button class="btn btn-light btn-xs" style="margin-top:8px" onclick="DB.selDate=null;render()">✕ Cerrar</button>';
+      html+='</div>';
+    }
+  }
+  html+='<div class="shdr" style="margin-top:8px">Proximas reuniones ('+upcomingM.length+')</div>';
   html+='<div style="display:flex;flex-direction:column;gap:8px">';
   for(var i=0;i<meetsToShow.length;i++){
     var mt=meetsToShow[i];
@@ -2774,6 +2791,52 @@ function saveToStorage(){
     };
     localStorage.setItem('studioOS_v1',JSON.stringify(save));
   }catch(e){console.warn('Save failed:',e);}
+}
+
+function exportBackup(){
+  try{
+    var save={
+      clients:DB.clients,potentials:DB.potentials,tasks:DB.tasks,
+      meetings:DB.meetings,posts:DB.posts,monthly:DB.monthly,
+      studio:DB.studio,exportDate:TODAY,version:'studioOS_v1'
+    };
+    var blob=new Blob([JSON.stringify(save,null,2)],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;a.download='StudioOne_backup_'+TODAY+'.json';
+    document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
+    var el=document.getElementById('backup-status');
+    if(el){el.textContent='Backup descargado '+TODAY;el.style.color='var(--indigo)';}
+  }catch(e){alert('Error al exportar: '+e.message);}
+}
+
+function importBackup(){
+  var input=document.createElement('input');
+  input.type='file';input.accept='.json';
+  input.onchange=function(e){
+    var file=e.target.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        var data=JSON.parse(ev.target.result);
+        if(!data.clients){alert('Archivo no valido.');return;}
+        if(!confirm('Esto reemplazara todos tus datos actuales con el backup. Continuar?'))return;
+        if(data.clients)DB.clients=data.clients;
+        if(data.potentials)DB.potentials=data.potentials;
+        if(data.tasks)DB.tasks=data.tasks;
+        if(data.meetings)DB.meetings=data.meetings;
+        if(data.posts)DB.posts=data.posts;
+        if(data.monthly)DB.monthly=data.monthly;
+        if(data.studio)DB.studio=data.studio;
+        saveToStorage();render();buildNav();
+        var el=document.getElementById('backup-status');
+        if(el){el.textContent='Backup restaurado de '+data.exportDate;el.style.color='var(--indigo)';}
+      }catch(err){alert('Error al importar: '+err.message);}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 function loadFromStorage(){
