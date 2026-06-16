@@ -154,10 +154,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .studio-task{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;background:var(--violet-bg);transition:border .12s}
 .studio-task:hover{border-color:var(--violet-bd)}
 
-.pen-tip{position:relative;cursor:help}
-.pen-tip::after{content:attr(data-pen);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#1a1d2e;color:#fff;font-size:9.5px;font-weight:600;padding:3px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;font-family:var(--mono)}
+.pen-tip{position:relative;cursor:help;border-bottom:1px dashed rgba(74,108,247,.4)}
+.pen-tip::after{content:attr(data-pen);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1d2e;color:#fff;font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s;z-index:9999;font-family:var(--mono);box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .pen-tip:hover::after{opacity:1}
-.pen-tip::before{content:'';position:absolute;bottom:calc(100%);left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1a1d2e;pointer-events:none;opacity:0;transition:opacity .15s;z-index:999}
+.pen-tip::before{content:'';position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1a1d2e;pointer-events:none;opacity:0;transition:opacity .2s;z-index:9999}
 .pen-tip:hover::before{opacity:1}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -380,7 +380,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -586,10 +586,11 @@ function pen(usd){
   var soles=(usd*rate).toLocaleString('es-PE',{minimumFractionDigits:0,maximumFractionDigits:0});
   return soles;
 }
-function wrapPen(html,usd){
-  if(!usd||isNaN(usd)||usd===0)return html;
+function wrapPen(h,usd){
+  if(!usd||isNaN(usd)||usd===0)return h;
   var soles=pen(usd);
-  return'<span class="pen-tip" data-pen="S/ '+soles+' soles">'+html+'</span>';
+  var label='S/ '+soles+' soles';
+  return'<span class="pen-tip" data-pen="'+label+'" title="'+label+'">'+h+'</span>';
 }
 function fmtDate(s){return new Date(s+'T12:00').toLocaleDateString('es-PE',{day:'numeric',month:'short'});}
 function fmtShort(d){return(d.getDate())+' '+([ 'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]);}
@@ -713,7 +714,9 @@ function rDash(){
   var tP=DB.clients.reduce(function(a,c){return a+c.paid;},0);
   var tPend=DB.clients.reduce(function(a,c){return a+c.pending;},0);
   var urg=DB.tasks.filter(function(t){return isUrgent(t);}).length;
-  var thisM=DB.monthly[DB.monthly.length-1];
+  var curMonthIdx=new Date(TODAY).getMonth();
+  var curMonthNames=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var thisM=DB.monthly.find(function(m){return m.m===curMonthNames[curMonthIdx];})||DB.monthly[DB.monthly.length-1]||{rev:0,exp:0};
   var ms=[
     {l:'Cobrado total',v:'$'+tP.toLocaleString(),s:'de $'+tB.toLocaleString(),bg:'#f2f3f5',bc:'#ced2dc',tc:'#4a6cf7',k:'dollar'},
     {l:'Por cobrar',v:'$'+tPend.toLocaleString(),s:DB.clients.filter(function(c){return c.pending>0;}).length+' clientes',bg:'#f3f4f6',bc:'#d1d5db',tc:'#5a5f72',k:'pay_pending'},
@@ -901,7 +904,7 @@ function delClient(id){
   buildNav();render();
 }
 
-function markDep(id){var c=DB.clients.find(function(x){return x.id===id;});if(!c)return;var h=Math.round(c.budget/2);c.dep=true;c.paid+=h;c.pending-=h;if(c.st==='pending')c.st='active';c.ups.unshift({t:'50% adelanto recibido - $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});DB.monthly[DB.monthly.length-1].rev+=h;render();}
+function markDep(id){var c=DB.clients.find(function(x){return x.id===id;});if(!c)return;var h=Math.round(c.budget/2);c.dep=true;c.paid+=h;c.pending-=h;if(c.st==='pending')c.st='active';c.ups.unshift({t:'50% adelanto recibido - $'+h.toLocaleString(),d:'Hoy',c:cc(c,0)});saveToStorage();render();}
 function selC(id){DB.selClient=DB.clients.find(function(c){return c.id===id;});if(DB.view==='clients')render();}
 
 function rDetail(c){
@@ -997,7 +1000,7 @@ function rPotential(){
 
 function movePot(id,stage){var p=DB.potentials.find(function(x){return x.id===id;});if(p)p.stage=stage;render();}
 function delPot(id){DB.potentials=DB.potentials.filter(function(x){return x.id!==id;});buildNav();render();}
-function convertPot(id){var p=DB.potentials.find(function(x){return x.id===id;});if(!p)return;var h=Math.round(p.budget/2);DB.clients.push({id:Date.now(),nm:p.nm,co:p.co,color:p.color,in:p.in,type:'',ct:'once',st:'active',since:'Jun 2026',budget:p.budget,paid:h,pending:p.budget-h,dep:true,pkg:'starter',svs:[p.svc],email:'',phone:'',h:{total:40,used:0},start:TODAY,end:'2026-08-30',wks:8,stepsDone:[],wp:[{w:1,l:'Brief',p:20},{w:4,l:'En proceso',p:60},{w:8,l:'Entrega',p:100}],notes:'Convertido desde pipeline.',ups:[{t:'50% adelanto - $'+h.toLocaleString(),d:'Hoy',c:p.color[0]}]});DB.potentials=DB.potentials.filter(function(x){return x.id!==id;});DB.monthly[DB.monthly.length-1].rev+=h;buildNav();render();}
+function convertPot(id){var p=DB.potentials.find(function(x){return x.id===id;});if(!p)return;var h=Math.round(p.budget/2);DB.clients.push({id:Date.now(),nm:p.nm,co:p.co,color:p.color,in:p.in,type:'',ct:'once',st:'active',since:'Jun 2026',budget:p.budget,paid:h,pending:p.budget-h,dep:true,pkg:'starter',svs:[p.svc],email:'',phone:'',h:{total:40,used:0},start:TODAY,end:'2026-08-30',wks:8,stepsDone:[],wp:[{w:1,l:'Brief',p:20},{w:4,l:'En proceso',p:60},{w:8,l:'Entrega',p:100}],notes:'Convertido desde pipeline.',ups:[{t:'50% adelanto - $'+h.toLocaleString(),d:'Hoy',c:p.color[0]}]});DB.potentials=DB.potentials.filter(function(x){return x.id!==id;});saveToStorage();buildNav();render();}
 
 // ── TASKS ──
 function rTasks(){
@@ -1743,17 +1746,27 @@ function rSchedule(){
     evByD[dateStr].push(ev);
   }
 
-  // All meetings (no filter by date — show everything)
+  // All meetings
   DB.meetings.forEach(function(mt){
     addEv(mt.date,{type:'meet',id:mt.id,ttl:mt.ttl,time:mt.time,cl:mt.cl,done:false,auto:mt.auto,link:mt.link});
   });
-  // All tasks (show all, done = muted)
+  // All tasks
   DB.tasks.forEach(function(t){
     addEv(t.due,{type:'task',id:t.id,ttl:t.ttl,time:'',cl:t.cl,done:t.st==='done',pr:t.pr});
   });
   // Notes
   (DB.notes||[]).forEach(function(n){
     addEv(n.date,{type:'note',id:n.id,ttl:n.ttl,time:n.time||'',cl:'',done:false});
+  });
+  // Peru holidays
+  PERU_HOLIDAYS.forEach(function(h){
+    addEv(h.date,{type:'holiday',id:'h_'+h.date,ttl:h.emoji+' '+h.name,time:'',cl:'',done:false});
+  });
+  // Birthdays (recurring — match month+day)
+  (DB.birthdays||[]).forEach(function(b){
+    var parts=b.date.split('-');
+    var bdThisYear=y+'-'+parts[1]+'-'+parts[2];
+    addEv(bdThisYear,{type:'birthday',id:b.id,ttl:'🎂 '+b.name,time:'',cl:'',done:false,note:b.note});
   });
 
   var cells='';
@@ -1772,9 +1785,13 @@ function rSchedule(){
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
       var evBg=ev.done?'var(--bg3)':ev.type==='note'?'var(--amber-bg)':cl?cc(cl,1):'var(--indigo-bg)';
       var evFg=ev.done?'var(--text3)':ev.type==='note'?'#92400e':cl?cc(cl,0):'var(--indigo)';
-      var icon=ev.type==='meet'?'📹':ev.type==='note'?'📝':'✓ ';
+      var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
+      var evBg2=isHoliday?'#fef3c7':isBday?'#fdf2f8':evBg;
+      var evFg2=isHoliday?'#92400e':isBday?'#be185d':evFg;
+      var evBorder=isHoliday?'1px solid #fde68a':isBday?'1px solid #fad1e8':'none';
       var shortTtl=ev.ttl.length>14?ev.ttl.substring(0,13)+'…':ev.ttl;
-      cells+='<div class="cal-ev" onclick="event.stopPropagation();'+(ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':'editTask('+ev.id+')')+'" style="background:'+evBg+';color:'+evFg+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:pointer" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+icon+shortTtl+'</div>';
+      var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'':ev.type==='holiday'?'':'editTask('+ev.id+')';
+      cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isHoliday||isBday?'600':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
     }
     cells+='<div class="cal-add" onclick="event.stopPropagation();openAgendaModal(\''+dateStr+'\')">+</div>';
     cells+='</div>';
@@ -1817,7 +1834,9 @@ function rSchedule(){
       var accent=cl?cc(cl,0):ev.type==='note'?'#92400e':'var(--indigo)';
       html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
       html+='<div style="display:flex;align-items:flex-start;gap:6px">';
-      html+='<div style="font-size:9px;background:'+(ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='note'?'#92400e':'var(--text2)')+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+(ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':'Tarea')+'</div>';
+      var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':'Tarea';
+      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#d97706':ev.type==='birthday'?'#be185d':ev.type==='note'?'#92400e':'var(--text2)';
+      html+='<div style="font-size:9px;background:'+typeBg+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+typeLabel+'</div>';
       html+='<div style="flex:1">';
       html+='<div style="font-size:11.5px;font-weight:600;color:'+(ev.done?'var(--text3)':'var(--text)')+';text-decoration:'+(ev.done?'line-through':'none')+';line-height:1.4;word-break:break-word">'+ev.ttl+'</div>';
       if(ev.cl)html+='<div style="font-size:9.5px;color:var(--text3);margin-top:2px">'+ev.cl+'</div>';
@@ -1957,7 +1976,9 @@ function rFinance(){
   var tRev=DB.monthly.reduce(function(a,m){return a+m.rev;},0);
   var tExp=DB.monthly.reduce(function(a,m){return a+m.exp;},0);
   var tNet=tRev-tExp;
-  var thisM=DB.monthly[DB.monthly.length-1];
+  var curMonthIdx=new Date(TODAY).getMonth();
+  var curMonthNames=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var thisM=DB.monthly.find(function(m){return m.m===curMonthNames[curMonthIdx];})||DB.monthly[DB.monthly.length-1]||{rev:0,exp:0};
   var mNet=thisM.rev-thisM.exp;
   var maxRev=Math.max.apply(null,DB.monthly.map(function(m){return m.rev;}));
   // Monthly pacted per client
@@ -2951,7 +2972,7 @@ function saveToStorage(){
     var save={
       clients:DB.clients,potentials:DB.potentials,tasks:DB.tasks,
       meetings:DB.meetings,posts:DB.posts,monthly:DB.monthly,
-      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[]
+      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[]
     };
     localStorage.setItem('studioOS_v1',JSON.stringify(save));
   }catch(e){console.warn('Save failed:',e);}
@@ -3017,6 +3038,7 @@ function loadFromStorage(){
     if(save.studio)DB.studio=save.studio;
     if(save.tlExpand)DB.tlExpand=save.tlExpand;
     if(save.notes)DB.notes=save.notes;
+    if(save.birthdays)DB.birthdays=save.birthdays;
     var gUser=localStorage.getItem('studioGmailUser');
     var gPw=localStorage.getItem('studioGmailPw');
     var ejsSvc=localStorage.getItem('studioEjsService');
@@ -3102,6 +3124,60 @@ function saveEditClient(id){
   c.ups.unshift({t:'Datos del cliente actualizados',d:'Hoy',c:cc(c,0)});
   closeM();buildNav();render();
 }
+// Peru public holidays 2026
+var PERU_HOLIDAYS=[
+  {date:'2026-01-01',name:'Año Nuevo',emoji:'🎆'},
+  {date:'2026-04-02',name:'Jueves Santo',emoji:'✝️'},
+  {date:'2026-04-03',name:'Viernes Santo',emoji:'✝️'},
+  {date:'2026-05-01',name:'Día del Trabajo',emoji:'👷'},
+  {date:'2026-06-07',name:'Batalla de Arica',emoji:'🇵🇪'},
+  {date:'2026-06-29',name:'San Pedro y San Pablo',emoji:'⛪'},
+  {date:'2026-07-28',name:'Día de la Independencia',emoji:'🇵🇪'},
+  {date:'2026-07-29',name:'Día de la Gran Unidad Nacional',emoji:'🇵🇪'},
+  {date:'2026-08-06',name:'Batalla de Junín',emoji:'⚔️'},
+  {date:'2026-08-30',name:'Santa Rosa de Lima',emoji:'🌹'},
+  {date:'2026-10-08',name:'Combate de Angamos',emoji:'⚓'},
+  {date:'2026-11-01',name:'Día de Todos los Santos',emoji:'🕯️'},
+  {date:'2026-11-10',name:'Día del Indulto',emoji:'🏛️'},
+  {date:'2026-12-08',name:'Inmaculada Concepción',emoji:'💙'},
+  {date:'2026-12-09',name:'Batalla de Ayacucho',emoji:'🗡️'},
+  {date:'2026-12-25',name:'Navidad',emoji:'🎄'}
+];
+
+function getHolidayForDate(dateStr){
+  return PERU_HOLIDAYS.find(function(h){return h.date===dateStr;})||null;
+}
+
+function getBirthdaysForDate(dateStr){
+  var parts=dateStr.split('-');var mo=parts[1];var dy=parts[2];
+  return (DB.birthdays||[]).filter(function(b){
+    var bp=b.date.split('-');return bp[1]===mo&&bp[2]===dy;
+  });
+}
+
+function openBirthdayModal(dateStr){
+  showModal(
+    '<h3>🎂 Agregar cumpleaños</h3>'+
+    fg('Nombre','bd-nm','Ej. María López','')+
+    '<div class="fg"><label class="fl">Fecha de cumpleaños</label><input class="fi" id="bd-dt" type="date" value="'+(dateStr||'')+'"/></div>'+
+    fg('Nota (opcional)','bd-nt','Ej. Cliente, amiga...','')+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveBirthday()">Guardar</button></div>'
+  );
+}
+function saveBirthday(){
+  var nm=(document.getElementById('bd-nm')||{}).value||'';
+  var dt=(document.getElementById('bd-dt')||{}).value||'';
+  var nt=(document.getElementById('bd-nt')||{}).value||'';
+  if(!nm||!dt){alert('Agrega nombre y fecha.');return;}
+  if(!DB.birthdays)DB.birthdays=[];
+  DB.birthdays.push({id:Date.now(),name:nm,date:dt,note:nt});
+  closeM();saveToStorage();render();
+}
+function delBirthday(id){
+  DB.birthdays=(DB.birthdays||[]).filter(function(x){return x.id!==id;});
+  saveToStorage();render();
+}
+
 function openAgendaModal(dateStr){
   showModal(
     '<h3>Agregar a la agenda</h3>'+
@@ -3109,6 +3185,7 @@ function openAgendaModal(dateStr){
     '<button onclick="closeM();openMeetModal(\'\',\''+dateStr+'\')" style="background:var(--indigo-bg);border:1.5px solid var(--indigo-bd);border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">📹</div><div style="font-size:11px;font-weight:700;color:var(--indigo)">Reunión</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Google Meet o Zoom</div></button>'+
     '<button onclick="closeM();openTaskModalDate(\''+dateStr+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">✅</div><div style="font-size:11px;font-weight:700;color:var(--text)">Tarea</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Pendiente o recordatorio</div></button>'+
     '<button onclick="closeM();openNoteModal(\''+dateStr+'\')" style="background:var(--amber-bg);border:1.5px solid var(--amber-bd);border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">📝</div><div style="font-size:11px;font-weight:700;color:#92400e">Nota</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Apunte o recordatorio libre</div></button>'+
+    '<button onclick="closeM();openBirthdayModal(\''+dateStr+'\')" style="background:#fdf2f8;border:1.5px solid #fad1e8;border-radius:10px;padding:16px 10px;cursor:pointer;font-family:var(--sans)"><div style="font-size:20px;margin-bottom:6px">🎂</div><div style="font-size:11px;font-weight:700;color:#be185d">Cumpleaños</div><div style="font-size:9.5px;color:var(--text3);margin-top:3px">Agregar fecha especial</div></button>'+
     '</div>'+
     '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button></div>'
   );
