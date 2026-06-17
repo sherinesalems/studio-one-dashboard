@@ -1956,6 +1956,10 @@ function rSchedule(){
       var gStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(gd<10?'0':'')+gd;
       addEv(gStr,{type:'gym',id:'gym_'+gStr,ttl:'Gym 4:30–5:30',time:'16:30',cl:'',done:false});
     }
+    if(gDay===5||gDay===6||gDay===0){
+      var wStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(gd<10?'0':'')+gd;
+      addEv(wStr,{type:'workout',id:'workout_'+wStr,ttl:'Workout: Abs + Oblicuos + Plancha Frontal',time:'',cl:'',done:false});
+    }
   }
   // Peru holidays
   PERU_HOLIDAYS.forEach(function(h){
@@ -1981,7 +1985,7 @@ function rSchedule(){
     // Events
     // Sort: holidays first, then meetings, then tasks/personal/notes
     evs.sort(function(a,b){
-      var order={holiday:0,birthday:1,meet:2,personal:3,studio:4,note:5,task:6};
+      var order={holiday:0,birthday:1,meet:2,personal:3,studio:4,note:5,gym:6,workout:6,task:7};
       return (order[a.type]||5)-(order[b.type]||5);
     });
     for(var j=0;j<evs.length;j++){
@@ -1990,10 +1994,10 @@ function rSchedule(){
       var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='studio'?'#4d3e8c':ev.type==='task'?'#eaecef':cl?cc(cl,1):'var(--indigo-bg)';
       var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?'#312e81':'#312e81'):ev.type==='note'?'#3d3d1a':ev.type==='personal'?'#5b21b6':ev.type==='studio'?'#fff':ev.type==='task'?'#334155':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
-      var isGym=ev.type==='gym';
-      var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':isGym?'#bfdbfe':evBg;
-      var evFg2=isHoliday?'#9ca3af':isBday?'#fff':isGym?'#1e40af':evFg;
-      var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':isGym?'none':'none';
+      var isGym=ev.type==='gym';var isWorkout=ev.type==='workout';
+      var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':isGym?'#bfdbfe':isWorkout?'#dbeafe':evBg;
+      var evFg2=isHoliday?'#9ca3af':isBday?'#fff':isGym?'#1e40af':isWorkout?'#3b82f6':evFg;
+      var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':isGym?'none':isWorkout?'none':'none';
       var shortTtl=ev.ttl.length>40?ev.ttl.substring(0,39)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='personal'?'editPersonalTask('+ev.id+')':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday||isGym?'500':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
@@ -2021,6 +2025,7 @@ function rSchedule(){
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#ede9fe"></div>Personal</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#4d3e8c"></div>Estudio</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#bfdbfe"></div>Gym</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#dbeafe"></div>Workout</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#ededa9"></div>Nota</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#4a6cf7"></div>Cumpleaños</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text3)"><span>—</span>Feriado</div>';
@@ -2046,7 +2051,7 @@ function rSchedule(){
       var accent=cl?cc(cl,0):ev.type==='note'?'#d97706':'var(--indigo)';
       html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
       html+='<div style="display:flex;align-items:flex-start;gap:6px">';
-      var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':ev.type==='personal'?'Personal':ev.type==='studio'?'Estudio':'Tarea';
+      var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':ev.type==='personal'?'Personal':ev.type==='studio'?'Estudio':ev.type==='gym'?'Gym':ev.type==='workout'?'Workout':'Tarea';
       var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'#4a6cf7':ev.type==='note'?'#d97706':'var(--text2)';
       html+='<div style="font-size:9px;background:'+typeBg+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+typeLabel+'</div>';
       html+='<div style="flex:1">';
