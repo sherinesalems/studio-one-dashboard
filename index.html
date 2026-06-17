@@ -1214,36 +1214,68 @@ function rMiniCalSmall(){
   var m=DB.calMonth,y=DB.calYear;
   var mNames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var fd=(new Date(y,m,1).getDay()+6)%7,dm=new Date(y,m+1,0).getDate();
-  var hasEvent={};
-  DB.tasks.forEach(function(t){var d=new Date(t.due+'T12:00');if(d.getMonth()===m&&d.getFullYear()===y)hasEvent[d.getDate()]=(hasEvent[d.getDate()]||[]); hasEvent[d.getDate()].push({type:'task',done:t.st==='done'});});
-  DB.meetings.forEach(function(mt){var d=new Date(mt.date+'T12:00');if(d.getMonth()===m&&d.getFullYear()===y){if(!hasEvent[d.getDate()])hasEvent[d.getDate()]=[];hasEvent[d.getDate()].push({type:'meet'});}});
+
+  // Count events per day
+  var countByDay={};
+  function addCount(dateStr,type,done){
+    var d=new Date(dateStr+'T12:00');
+    if(d.getMonth()!==m||d.getFullYear()!==y)return;
+    var k=d.getDate();
+    if(!countByDay[k])countByDay[k]={tasks:0,done:0,meets:0};
+    if(type==='task'&&!done)countByDay[k].tasks++;
+    if(type==='task'&&done)countByDay[k].done++;
+    if(type==='meet')countByDay[k].meets++;
+  }
+  DB.tasks.forEach(function(t){addCount(t.due,'task',t.st==='done');});
+  DB.meetings.forEach(function(mt){addCount(mt.date,'meet',false);});
+
+  // Also count personal tasks
+  (DB.personalTasks||[]).forEach(function(t){addCount(t.date,'task',t.done);});
+
   var cells='';
-  for(var i=0;i<fd;i++)cells+='<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"></div>';
+  for(var i=0;i<fd;i++)cells+='<div></div>';
   for(var d=1;d<=dm;d++){
     var dateStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(d<10?'0':'')+d;
     var it=dateStr===TODAY;
-    var evs=hasEvent[d]||[];
-    var hasPending=evs.some(function(e){return e.type==='meet'||(e.type==='task'&&!e.done);});
-    var hasDone=evs.some(function(e){return e.type==='task'&&e.done;});
-    cells+='<div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;background:'+(it?'var(--indigo)':evs.length?'var(--bg2)':'transparent')+';cursor:'+(evs.length?'pointer':'default')+'">';
-    cells+='<div style="font-size:10px;font-weight:'+(it||hasPending?'700':'400')+';color:'+(it?'#fff':hasPending?'var(--indigo)':'var(--text3)')+'">'+d+'</div>';
-    if(evs.length){
-      cells+='<div style="display:flex;gap:2px;margin-top:2px">';
-      if(hasPending)cells+='<div style="width:4px;height:4px;border-radius:50%;background:'+(it?'#fff':'var(--indigo)')+'"></div>';
-      if(hasDone)cells+='<div style="width:4px;height:4px;border-radius:50%;background:var(--text3)"></div>';
-      cells+='</div>';
+    var c=countByDay[d]||{tasks:0,done:0,meets:0};
+    var total=c.tasks+c.meets;
+    var allDone=total===0&&c.done>0;
+
+    cells+='<div style="display:flex;flex-direction:column;align-items:center;padding:2px 0;border-radius:5px;cursor:pointer;background:'+(it?'var(--indigo)':'transparent')+'" onclick="DB.selDate=\''+dateStr+'\';nav(\'schedule\')">';
+    // Day number
+    cells+='<div style="font-size:10px;font-weight:'+(it||total>0?'600':'400')+';color:'+(it?'#fff':total>0?'var(--text)':'var(--text3)')+'">'+d+'</div>';
+    // Count badge or dot
+    if(total>0){
+      var badgeBg=c.meets>0?'var(--indigo)':'#374151';
+      cells+='<div style="font-size:8px;font-weight:700;color:#fff;background:'+badgeBg+';border-radius:8px;padding:0px 4px;line-height:14px;margin-top:1px">'+total+'</div>';
+    } else if(allDone){
+      cells+='<div style="width:5px;height:5px;border-radius:50%;background:#16a34a;margin-top:2px"></div>';
+    } else {
+      cells+='<div style="height:14px"></div>';
     }
     cells+='</div>';
   }
+
+  // Summary for current month
+  var totalPending=DB.tasks.filter(function(t){var d=new Date(t.due+'T12:00');return d.getMonth()===m&&d.getFullYear()===y&&t.st==='pending';}).length;
+  var totalMeets=DB.meetings.filter(function(mt){var d=new Date(mt.date+'T12:00');return d.getMonth()===m&&d.getFullYear()===y;}).length;
+
   return '<div style="background:#fff">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
-    +'<button onclick="DB.calMonth=DB.calMonth>0?DB.calMonth-1:11;if(DB.calMonth===11)DB.calYear--;render()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px">&larr;</button>'
+    +'<button onclick="DB.calMonth=DB.calMonth>0?DB.calMonth-1:11;if(DB.calMonth===11)DB.calYear--;render()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px">&larr;</button>'
     +'<div style="font-size:10px;font-weight:700;color:var(--text)">'+mNames[m]+' '+y+'</div>'
-    +'<button onclick="DB.calMonth=DB.calMonth<11?DB.calMonth+1:0;if(DB.calMonth===0)DB.calYear++;render()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px">&rarr;</button>'
+    +'<button onclick="DB.calMonth=DB.calMonth<11?DB.calMonth+1:0;if(DB.calMonth===0)DB.calYear++;render()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px">&rarr;</button>'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">'
-    +['L','M','M','J','V','S','D'].map(function(d){return'<div style="text-align:center;font-size:8px;font-weight:700;color:var(--text3);padding:2px 0">'+d+'</div>';}).join('')
-    +cells+'</div></div>';
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:8px">'
+    +['L','M','M','J','V','S','D'].map(function(d){return'<div style="text-align:center;font-size:8px;font-weight:600;color:var(--text3);padding-bottom:3px">'+d+'</div>';}).join('')
+    +cells+'</div>'
+    +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;gap:8px">'
+    +'<div style="flex:1;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">'+totalPending+'</div><div style="font-size:8.5px;color:var(--text3)">tareas</div></div>'
+    +'<div style="width:1px;background:var(--border)"></div>'
+    +'<div style="flex:1;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--indigo)">'+totalMeets+'</div><div style="font-size:8.5px;color:var(--text3)">reuniones</div></div>'
+    +'</div>'
+    +'<div style="margin-top:8px;font-size:9px;color:var(--text3);text-align:center">Click en un día para ver en Agenda</div>'
+    +'</div>';
 }
 
 function rMiniCal(){
@@ -1958,7 +1990,7 @@ function rSchedule(){
       var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':isGym?'#bfdbfe':evBg;
       var evFg2=isHoliday?'#9ca3af':isBday?'#fff':isGym?'#1e40af':evFg;
       var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':isGym?'none':'none';
-      var shortTtl=ev.ttl.length>30?ev.ttl.substring(0,29)+'…':ev.ttl;
+      var shortTtl=ev.ttl.length>40?ev.ttl.substring(0,39)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='personal'?'editPersonalTask('+ev.id+')':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday||isGym?'500':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
     }
