@@ -3405,11 +3405,7 @@ function saveClient(){
   };
   DB.clients.push(newClient);
   if(sd)addAutoMeetings(newClient);
-  // Auto-add budget to current month revenue
-  var startM2=sd?new Date(sd+'T12:00').getMonth():new Date(TODAY).getMonth();
-  var mNamesAI=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var mEntryAI=DB.monthly.find(function(m){return m.m===mNamesAI[startM2];});
-  if(mEntryAI)mEntryAI.rev+=bg;
+  // Revenue is recorded manually via markDep() and markFinal() payment buttons only
   closeM();buildNav();render();
 }
 
