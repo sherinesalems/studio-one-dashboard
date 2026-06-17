@@ -2169,6 +2169,67 @@ function delAgendaNote(id){
   DB.agendaNotes=(DB.agendaNotes||[]).filter(function(n){return n.id!==id;});
   saveToStorage();render();
 }
+function checkOCReminder(){
+  if(!DB.ocTaken)DB.ocTaken={};
+  var now=new Date();
+  var h=now.getHours(),mn=now.getMinutes();
+  // After 5PM and OC not taken today
+  if(h>=17&&!DB.ocTaken[TODAY]){
+    // Show banner if not already shown
+    var banner=document.getElementById('oc-banner');
+    if(!banner){
+      var b=document.createElement('div');
+      b.id='oc-banner';
+      var timeDisplay=h+':'+String(mn).padStart(2,'0');
+      var btn1=document.createElement('button');
+      btn1.textContent='✓ La tomé';
+      btn1.style.cssText='background:#fff;color:#9b1c1c;border:none;border-radius:7px;padding:6px 14px;cursor:pointer;font-weight:700;font-size:11px;font-family:var(--sans)';
+      btn1.onclick=function(){toggleOC(TODAY,null);var el=document.getElementById('oc-banner');if(el)el.remove();};
+      var btn2=document.createElement('button');
+      btn2.textContent='✕';
+      btn2.style.cssText='background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:11px;font-family:var(--sans)';
+      btn2.onclick=function(){var el=document.getElementById('oc-banner');if(el)el.remove();};
+      b.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">💊</span><div><div style="font-size:12px;font-weight:700;color:#fff">OC Reminder — Toma tu pastilla anticonceptiva</div><div style="font-size:10px;color:rgba(255,255,255,.8)">Ya son las '+timeDisplay+'hs y aún no la has marcado</div></div></div><div id="oc-btns" style="display:flex;gap:8px;flex-shrink:0"></div></div>';
+      b.querySelector('#oc-btns').appendChild(btn1);
+      b.querySelector('#oc-btns').appendChild(btn2);
+      b.style.cssText='position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#be123c,#9f1239);padding:12px 20px;z-index:9999;box-shadow:0 2px 12px rgba(0,0,0,.3)';
+      document.body.insertBefore(b,document.body.firstChild);
+    }
+    // Send email reminder (only once per day)
+    if(!DB.ocReminderSentDate||DB.ocReminderSentDate!==TODAY){
+      sendOCReminderEmail();
+    }
+  }
+}
+
+async function sendOCReminderEmail(){
+  if(!DB.emailjsServiceId||!DB.emailjsTemplateId||!DB.emailjsPublicKey)return;
+  try{
+    var now=new Date();
+    var timeStr=now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+    emailjs.init(DB.emailjsPublicKey);
+    await emailjs.send(DB.emailjsServiceId,DB.emailjsTemplateId,{
+      to_email:'sherinesalems@gmail.com',
+      subject:'💊 OC Reminder URGENTE — Toma tu pastilla',
+      message:'Hola Sherine,\n\nSon las '+timeStr+'hs y aún no has marcado que tomaste tu anticonceptivo oral hoy ('+TODAY+').\n\nAbre el dashboard y marca el botón OC en el calendario de hoy.\n\n⚠️ Esto es un recordatorio automático del Studio One Dashboard.\n\nSaludos,\nStudio One Dashboard',
+      from_name:'Studio One Dashboard'
+    });
+    DB.ocReminderSentDate=TODAY;
+    localStorage.setItem('ocReminderSentDate',TODAY);
+    console.log('OC reminder sent');
+  }catch(e){console.warn('OC email error:',e);}
+}
+
+// Check every minute after page load
+setTimeout(function(){
+  checkOCReminder();
+  setInterval(checkOCReminder,60000);
+},5000);
+
+// Also restore ocReminderSentDate from localStorage
+var _ocSent=localStorage.getItem('ocReminderSentDate');
+if(_ocSent)DB.ocReminderSentDate=_ocSent;
+
 function toggleOC(dateStr,e){
   if(e)e.stopPropagation();
   if(!DB.ocTaken)DB.ocTaken={};
