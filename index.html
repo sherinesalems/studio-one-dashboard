@@ -380,7 +380,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],subscriptions:[],
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -709,6 +709,7 @@ function render(){
 
 // ── DASHBOARD ──
 function rDash(){
+  if(DB.finTab==='subs'){var subHtml=rSubs();html+='<div class="content">'+subHtml+'</div>';return html;}
   var tB=DB.clients.reduce(function(a,c){return a+c.budget;},0);
   var tP=DB.clients.reduce(function(a,c){return a+c.paid;},0);
   var tPend=DB.clients.reduce(function(a,c){return a+c.pending;},0);
@@ -1887,6 +1888,15 @@ function rSchedule(){
   (DB.personalTasks||[]).forEach(function(t){
     addEv(t.date,{type:'personal',id:t.id,ttl:t.ttl,time:t.time||'',cl:'',done:t.done,pr:t.pr});
   });
+  // Gym recurring Mon-Thu
+  for(var gd=1;gd<=dm;gd++){
+    var gDate=new Date(y,m,gd);
+    var gDay=gDate.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu
+    if(gDay>=1&&gDay<=4){
+      var gStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(gd<10?'0':'')+gd;
+      addEv(gStr,{type:'gym',id:'gym_'+gStr,ttl:'Gym 4:30–5:30',time:'16:30',cl:'',done:false});
+    }
+  }
   // Peru holidays
   PERU_HOLIDAYS.forEach(function(h){
     addEv(h.date,{type:'holiday',id:'h_'+h.date,ttl:h.emoji+' '+h.name,time:'',cl:'',done:false});
@@ -1909,18 +1919,24 @@ function rSchedule(){
     // Day number
     cells+='<div class="cal-dn">'+(it?'<span style="background:var(--indigo);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+d+'</span>':'<span style="font-size:11px">'+d+'</span>')+'</div>';
     // Events
+    // Sort: holidays first, then meetings, then tasks/personal/notes
+    evs.sort(function(a,b){
+      var order={holiday:0,birthday:1,meet:2,personal:3,note:4,task:5};
+      return (order[a.type]||5)-(order[b.type]||5);
+    });
     for(var j=0;j<evs.length;j++){
       var ev=evs[j];
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?cc(cl,1):'var(--indigo-bg)'):ev.type==='note'?'#fbbf24':ev.type==='personal'?'#fef3c7':ev.type==='task'?'#f3f4f6':cl?cc(cl,1):'var(--indigo-bg)';
-      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?cc(cl,0):'var(--indigo)'):ev.type==='note'?'#fff':ev.type==='personal'?'#000':ev.type==='task'?'#374151':cl?cc(cl,0):'var(--indigo)';
+      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='task'?'#f8fafc':cl?cc(cl,1):'var(--indigo-bg)';
+      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?'#312e81':'#312e81'):ev.type==='note'?'#3d3d1a':ev.type==='personal'?'#5b21b6':ev.type==='task'?'#334155':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
-      var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':evBg;
-      var evFg2=isHoliday?'#9ca3af':isBday?'#fff':evFg;
-      var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':'none';
+      var isGym=ev.type==='gym';
+      var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':isGym?'#bfdbfe':evBg;
+      var evFg2=isHoliday?'#9ca3af':isBday?'#fff':isGym?'#1e40af':evFg;
+      var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':isGym?'none':'none';
       var shortTtl=ev.ttl.length>14?ev.ttl.substring(0,13)+'…':ev.ttl;
-      var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'':ev.type==='holiday'?'':'editTask('+ev.id+')';
-      cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday?'600':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
+      var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='personal'?'editPersonalTask('+ev.id+')':ev.type==='holiday'?'':'editTask('+ev.id+')';
+      cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday||isGym?'500':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
     }
     cells+='<div class="cal-add" onclick="event.stopPropagation();openAgendaModal(\''+dateStr+'\')">+</div>';
     cells+='</div>';
@@ -1937,13 +1953,15 @@ function rSchedule(){
   html+='</div>';
 
   // Legend
-  html+='<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;padding:8px 0">';
-  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:var(--indigo)"></div>Reunión</div>';
-  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#374151"></div>Tarea cliente</div>';
-  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#fef3c7;border:1px solid #fde68a"></div>Personal ⭐</div>';
-  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#fbbf24"></div>Nota</div>';
-  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="font-size:10px;color:#9ca3af">Feriado</div></div>';
-  html+='<div style="display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text2)"><div style="width:12px;height:12px;border-radius:3px;background:#16a34a"></div>Completado</div>';
+  html+='<div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;padding:8px 0">';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#a5b4fc"></div>Reunión</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#f8fafc;border:1px solid #cbd5e1"></div>Tarea</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#ede9fe"></div>Personal</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#bfdbfe"></div>Gym</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#ededa9"></div>Nota</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#4a6cf7"></div>Cumpleaños</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text3)"><span style="font-size:9px">—</span>Feriado</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#d1fae5"></div>Completado</div>';
   html+='</div>';
   html+='</div>';
 
@@ -2119,6 +2137,155 @@ function saveMonthly(idx){
   DB.monthly[idx].exp=exp;
   closeM();saveToStorage();render();
 }
+function getDefaultSubs(){
+  return [
+    // ACTIVAS
+    {id:1,name:'Wix',cat:'Web',price:13.50,cycle:'monthly',active:true,method:'Credit card',note:''},
+    {id:2,name:'UpWork',cat:'Freelance',price:19.99,cycle:'monthly',active:true,method:'BCP',note:''},
+    {id:3,name:'iCloud Apple',cat:'Almacenamiento',price:2.99,cycle:'monthly',active:true,method:'Chase Bank',note:'Pasar a BCP el proximo mes'},
+    // CANCELADAS / PAUSADAS
+    {id:4,name:'Playground',cat:'AI',price:15.00,cycle:'monthly',active:false,method:'',note:'Cancelado'},
+    {id:5,name:'Recraft',cat:'AI / Diseño',price:12.00,cycle:'monthly',active:false,method:'',note:'Cancelado'},
+    {id:6,name:'ChatGPT Plus',cat:'AI',price:21.76,cycle:'monthly',active:false,method:'',note:'Cancelado · Vence Jul 8 2026'},
+    {id:7,name:'CupCut',cat:'Video / Diseño',price:10.88,cycle:'monthly',active:false,method:'',note:'Cancelado'},
+    {id:8,name:'Adobe Suite',cat:'Diseño',price:39.99,cycle:'monthly',active:false,method:'',note:'Cancelado · Por renovar'},
+    {id:9,name:'Microsoft 365',cat:'Productividad',price:8.33,cycle:'monthly',active:false,method:'',note:'Pago anual $99.99/año · Cancelado'},
+    {id:10,name:'Magnific / Freepik',cat:'AI / Diseño',price:11.00,cycle:'monthly',active:false,method:'',note:'Cancelado · $11/mes billed anualmente'},
+    {id:11,name:'Nim',cat:'AI',price:5.00,cycle:'monthly',active:false,method:'',note:'Cancelado'},
+    {id:12,name:'Imagine',cat:'AI',price:9.00,cycle:'monthly',active:false,method:'',note:'Cancelado · $27 c/3 meses'},
+    {id:13,name:'Claude Pro',cat:'AI',price:20.00,cycle:'monthly',active:false,method:'',note:'Cancelado'}
+  ];
+}
+
+function rSubs(){
+  if(!DB.subscriptions||!DB.subscriptions.length)DB.subscriptions=getDefaultSubs();
+  var active=DB.subscriptions.filter(function(s){return s.active;});
+  var cancelled=DB.subscriptions.filter(function(s){return !s.active;});
+  var totalUSD=active.reduce(function(a,s){return a+(s.price||0);},0);
+  var limitPEN=4500;
+  var totalPEN=Math.round(totalUSD*(DB.penRate||3.41));
+  var pct=Math.min(100,Math.round(totalPEN/limitPEN*100));
+
+  var html='';
+
+  // Hero
+  html+='<div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:14px;padding:18px 22px;margin-bottom:20px;color:#fff">';
+  html+='<div style="font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;opacity:.6;margin-bottom:8px">Gasto mensual en suscripciones</div>';
+  html+='<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:2px">';
+  html+='<div style="font-family:var(--mono);font-size:34px;font-weight:700">$'+totalUSD.toFixed(2)+'</div>';
+  html+='<div style="font-family:var(--mono);font-size:14px;color:#a5b4fc;font-weight:600">S/ '+totalPEN.toLocaleString()+'</div>';
+  html+='</div>';
+  html+='<div style="font-size:9px;opacity:.5;margin-bottom:10px">Límite mensual deseado: S/ 4,500</div>';
+  html+='<div style="background:rgba(255,255,255,.12);border-radius:6px;height:6px;margin-bottom:5px">';
+  html+='<div style="background:'+(pct>80?'#f87171':pct>50?'#fbbf24':'#a5b4fc')+';border-radius:6px;height:100%;width:'+pct+'%;transition:width .3s"></div>';
+  html+='</div>';
+  html+='<div style="font-size:9px;opacity:.5">'+pct+'% del límite · S/ '+(limitPEN-totalPEN).toLocaleString()+' disponibles este mes</div>';
+  html+='</div>';
+
+  // ACTIVE
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+  html+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text)">Activas ('+active.length+')</div>';
+  html+='<button class="btn btn-dark btn-xs" onclick="openAddSubModal()">+ Agregar</button>';
+  html+='</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">';
+  if(!active.length)html+='<div style="font-size:11px;color:var(--text3);padding:12px;text-align:center;background:var(--bg2);border-radius:8px">Sin suscripciones activas</div>';
+  active.forEach(function(s){
+    html+='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px">';
+    html+='<div style="flex:1;min-width:0">';
+    html+='<div style="font-size:12px;font-weight:600;color:var(--text)">'+s.name+'</div>';
+    html+='<div style="font-size:9.5px;color:var(--text3);margin-top:2px">'+s.cat+(s.method?' · '+s.method:'')+(s.note?' · <span style="color:#d97706">'+s.note+'</span>':'')+'</div>';
+    html+='</div>';
+    html+='<div style="text-align:right;flex-shrink:0">';
+    html+='<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--rose)">-$'+s.price.toFixed(2)+'<span style="font-size:9px;font-weight:400;color:var(--text3)">/mes</span></div>';
+    html+='<div style="font-size:9px;color:var(--text3)">S/ '+Math.round(s.price*(DB.penRate||3.41))+'</div>';
+    html+='</div>';
+    html+='<div style="display:flex;gap:3px;flex-shrink:0">';
+    html+='<button class="btn btn-light btn-xs" onclick="editSub('+s.id+')">✏️</button>';
+    html+='<button class="btn btn-rose btn-xs" onclick="toggleSubActive('+s.id+')" title="Pausar">⏸</button>';
+    html+='</div></div>';
+  });
+  html+='</div>';
+
+  // CANCELLED
+  html+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:8px">Canceladas — posible renovación ('+cancelled.length+')</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:5px">';
+  cancelled.forEach(function(s){
+    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:9px 14px;display:flex;align-items:center;gap:10px">';
+    html+='<div style="flex:1;min-width:0">';
+    html+='<div style="font-size:11.5px;font-weight:500;color:var(--text2)">'+s.name+'</div>';
+    html+='<div style="font-size:9px;color:var(--text3);margin-top:1px">'+s.cat+(s.note?' · '+s.note:'')+'</div>';
+    html+='</div>';
+    html+='<div style="text-align:right;flex-shrink:0">';
+    html+='<div style="font-family:var(--mono);font-size:11px;color:var(--text3)">$'+s.price.toFixed(2)+'<span style="font-size:9px">/mes</span></div>';
+    html+='</div>';
+    html+='<div style="display:flex;gap:3px;flex-shrink:0">';
+    html+='<button class="btn btn-light btn-xs" onclick="editSub('+s.id+')">✏️</button>';
+    html+='<button class="btn btn-light btn-xs" onclick="toggleSubActive('+s.id+')" title="Reactivar" style="color:var(--indigo)">▶</button>';
+    html+='</div></div>';
+  });
+  html+='</div>';
+
+  return html;
+}
+
+function openAddSubModal(){
+  showModal(
+    '<h3>Nueva suscripción</h3>'+
+    fg('Nombre','sub-nm','Ej. Notion, Figma...','')+
+    '<div class="fg"><label class="fl">Categoría</label><select class="fs" id="sub-cat"><option value="ai">AI</option><option value="design">Diseño</option><option value="web">Web</option><option value="productivity">Productividad</option><option value="storage">Almacenamiento</option><option value="freelance">Freelance</option><option value="other">Otro</option></select></div>'+
+    fg('Precio (USD/mes)','sub-pr','Ej. 12.99','')+
+    '<div class="fg"><label class="fl">Ciclo</label><select class="fs" id="sub-cy"><option value="monthly">Mensual</option><option value="annual">Anual</option></select></div>'+
+    fg('Método de pago','sub-mt','Chase, BCP, etc.','')+
+    fg('Nota','sub-nt','Ej. Vence Jul 8...','')+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveSub()">Guardar</button></div>'
+  );
+}
+function saveSub(){
+  var nm=(document.getElementById('sub-nm')||{}).value||'';
+  if(!nm){alert('Agrega un nombre.');return;}
+  if(!DB.subscriptions)DB.subscriptions=[];
+  var pr=parseFloat((document.getElementById('sub-pr')||{}).value)||0;
+  DB.subscriptions.push({
+    id:Date.now(),name:nm,
+    cat:(document.getElementById('sub-cat')||{}).value||'other',
+    price:pr,
+    cycle:(document.getElementById('sub-cy')||{}).value||'monthly',
+    method:(document.getElementById('sub-mt')||{}).value||'',
+    note:(document.getElementById('sub-nt')||{}).value||'',
+    active:true
+  });
+  closeM();saveToStorage();render();
+}
+function toggleSubActive(id){
+  var s=(DB.subscriptions||[]).find(function(x){return x.id===id;});
+  if(!s)return;s.active=!s.active;saveToStorage();render();
+}
+function editSub(id){
+  var s=(DB.subscriptions||[]).find(function(x){return x.id===id;});
+  if(!s)return;
+  showModal(
+    '<h3>Editar suscripción</h3>'+
+    '<div class="fg"><label class="fl">Nombre</label><input class="fi" id="es-nm" value="'+s.name.replace(/"/g,'&quot;')+'"/></div>'+
+    '<div class="fg"><label class="fl">Precio USD/mes</label><input class="fi" id="es-pr" type="number" step="0.01" value="'+s.price+'"/></div>'+
+    '<div class="fg"><label class="fl">Método de pago</label><input class="fi" id="es-mt" value="'+(s.method||'').replace(/"/g,'&quot;')+'"/></div>'+
+    '<div class="fg"><label class="fl">Nota</label><input class="fi" id="es-nt" value="'+(s.note||'').replace(/"/g,'&quot;')+'"/></div>'+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-rose btn-xs" onclick="delSub('+id+')">Eliminar</button><button class="btn btn-dark btn-sm" onclick="saveSubEdit('+id+')">Guardar</button></div>'
+  );
+}
+function saveSubEdit(id){
+  var s=(DB.subscriptions||[]).find(function(x){return x.id===id;});
+  if(!s)return;
+  s.name=document.getElementById('es-nm').value||s.name;
+  s.price=parseFloat(document.getElementById('es-pr').value)||s.price;
+  s.method=document.getElementById('es-mt').value||'';
+  s.note=document.getElementById('es-nt').value||'';
+  closeM();saveToStorage();render();
+}
+function delSub(id){
+  DB.subscriptions=(DB.subscriptions||[]).filter(function(x){return x.id!==id;});
+  closeM();saveToStorage();render();
+}
+
 function rFinance(){
   var tB=DB.clients.reduce(function(a,c){return a+c.budget;},0);
   var tP=DB.clients.reduce(function(a,c){return a+c.paid;},0);
@@ -3131,7 +3298,7 @@ function saveToStorage(){
     var save={
       clients:DB.clients,potentials:DB.potentials,tasks:DB.tasks,
       meetings:DB.meetings,posts:DB.posts,monthly:DB.monthly,
-      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[],personalTasks:DB.personalTasks||[]
+      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[],personalTasks:DB.personalTasks||[],subscriptions:DB.subscriptions||[]
     };
     localStorage.setItem('studioOS_v1',JSON.stringify(save));
   }catch(e){console.warn('Save failed:',e);}
@@ -3199,6 +3366,8 @@ function loadFromStorage(){
     if(save.notes)DB.notes=save.notes;
     if(save.birthdays)DB.birthdays=save.birthdays;
     if(save.personalTasks)DB.personalTasks=save.personalTasks;
+    if(save.subscriptions)DB.subscriptions=save.subscriptions;
+    if(!DB.subscriptions||!DB.subscriptions.length)DB.subscriptions=getDefaultSubs();
     var gUser=localStorage.getItem('studioGmailUser');
     var gPw=localStorage.getItem('studioGmailPw');
     var ejsSvc=localStorage.getItem('studioEjsService');
