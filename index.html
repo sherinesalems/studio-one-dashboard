@@ -380,7 +380,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],subscriptions:[],agendaNotes:[],ocTaken:{},
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],subscriptions:[],agendaNotes:[],ocTaken:{},cardReminder:true,
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -1940,6 +1940,14 @@ function rSchedule(){
       }
     }
   });
+  // Card payment reminder — 22nd of every month
+  if(DB.cardReminder!==false){
+    var cardDay=22;
+    if(cardDay<=dm){
+      var cardStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(cardDay<10?'0':'')+cardDay;
+      addEv(cardStr,{type:'cardremind',id:'card_'+cardStr,ttl:'💳 Pagar Tarjeta de Crédito',time:'',cl:'',done:false});
+    }
+  }
   // Personal tasks
   (DB.personalTasks||[]).forEach(function(t){
     addEv(t.date,{type:'personal',id:t.id,ttl:t.ttl,time:t.time||'',cl:'',done:t.done,pr:t.pr});
@@ -1985,19 +1993,19 @@ function rSchedule(){
     // Events
     // Sort: holidays first, then meetings, then tasks/personal/notes
     evs.sort(function(a,b){
-      var order={holiday:0,birthday:1,meet:2,personal:3,studio:4,note:5,gym:6,workout:6,task:7};
+      var order={holiday:0,birthday:1,cardremind:2,meet:3,personal:4,studio:5,note:6,gym:7,workout:7,task:8};
       return (order[a.type]||5)-(order[b.type]||5);
     });
     for(var j=0;j<evs.length;j++){
       var ev=evs[j];
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#76cea4':ev.type==='personal'?'#ede9fe':ev.type==='studio'?'#4d3e8c':ev.type==='task'?'#eaecef':cl?cc(cl,1):'var(--indigo-bg)';
-      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?'#312e81':'#312e81'):ev.type==='note'?'#fff':ev.type==='personal'?'#5b21b6':ev.type==='studio'?'#fff':ev.type==='task'?'#334155':cl?cc(cl,0):'var(--indigo)';
+      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='studio'?'#4d3e8c':ev.type==='task'?'#eaecef':cl?cc(cl,1):'var(--indigo-bg)';
+      var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?'#312e81':'#312e81'):ev.type==='note'?'#3d3d1a':ev.type==='personal'?'#5b21b6':ev.type==='studio'?'#fff':ev.type==='task'?'#334155':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
-      var isGym=ev.type==='gym';var isWorkout=ev.type==='workout';
-      var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':isGym?'#bfdbfe':isWorkout?'#eff6ff':evBg;
-      var evFg2=isHoliday?'#9ca3af':isBday?'#fff':isGym?'#1e40af':isWorkout?'#93c5fd':evFg;
-      var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':isGym?'none':isWorkout?'none':'none';
+      var isGym=ev.type==='gym';var isWorkout=ev.type==='workout';var isCard=ev.type==='cardremind';
+      var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':isCard?'#58d6af':isGym?'#bfdbfe':isWorkout?'#eff6ff':evBg;
+      var evFg2=isHoliday?'#9ca3af':isBday?'#fff':isCard?'#fff':isGym?'#1e40af':isWorkout?'#93c5fd':evFg;
+      var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':isCard?'none':isGym?'none':isWorkout?'none':'none';
       var shortTtl=ev.ttl.length>40?ev.ttl.substring(0,39)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='personal'?'editPersonalTask('+ev.id+')':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday||isGym?'500':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
@@ -2026,7 +2034,8 @@ function rSchedule(){
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#4d3e8c"></div>Estudio</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#bfdbfe"></div>Gym</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#dbeafe"></div>Workout</div>';
-  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#76cea4"></div>Nota</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#ededa9"></div>Nota</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#58d6af"></div>Tarjeta</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#4a6cf7"></div>Cumpleaños</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text3)"><span>—</span>Feriado</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#d1fae5"></div>Completado</div>';
@@ -2048,11 +2057,11 @@ function rSchedule(){
     if(!selEvs.length)html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px 0">Sin eventos este dia</div>';
     selEvs.forEach(function(ev){
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var accent=cl?cc(cl,0):ev.type==='note'?'#0d9488':'var(--indigo)';
+      var accent=cl?cc(cl,0):ev.type==='note'?'#d97706':'var(--indigo)';
       html+='<div style="background:'+(ev.done?'var(--bg2)':'#fff')+';border:1px solid var(--border);border-left:3px solid '+accent+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(ev.done?.6:1)+'">';
       html+='<div style="display:flex;align-items:flex-start;gap:6px">';
-      var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':ev.type==='personal'?'Personal':ev.type==='studio'?'Estudio':ev.type==='gym'?'Gym':ev.type==='workout'?'Workout':'Tarea';
-      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'#4a6cf7':ev.type==='note'?'#0d9488':'var(--text2)';
+      var typeLabel=ev.type==='meet'?'Reunión':ev.type==='note'?'Nota':ev.type==='holiday'?'Feriado':ev.type==='birthday'?'Cumpleaños':ev.type==='personal'?'Personal':ev.type==='studio'?'Estudio':ev.type==='gym'?'Gym':ev.type==='workout'?'Workout':ev.type==='cardremind'?'Recordatorio':'Tarea';
+      var typeBg=ev.done?'var(--bg3)':ev.type==='meet'?'var(--indigo)':ev.type==='holiday'?'#374151':ev.type==='birthday'?'#4a6cf7':ev.type==='note'?'#d97706':'var(--text2)';
       html+='<div style="font-size:9px;background:'+typeBg+';color:#fff;border-radius:3px;padding:1px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px">'+typeLabel+'</div>';
       html+='<div style="flex:1">';
       html+='<div style="font-size:11.5px;font-weight:600;color:'+(ev.done?'var(--text3)':'var(--text)')+';text-decoration:'+(ev.done?'line-through':'none')+';line-height:1.4;word-break:break-word">'+ev.ttl+'</div>';
@@ -2088,7 +2097,7 @@ function rSchedule(){
 
     upcoming.forEach(function(ev){
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var accent=cl?cc(cl,0):ev.type==='note'?'#0d9488':'var(--indigo)';
+      var accent=cl?cc(cl,0):ev.type==='note'?'#d97706':'var(--indigo)';
       var isToday2=ev.date===TODAY;
       html+='<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bg2);align-items:flex-start">';
       html+='<div style="text-align:center;flex-shrink:0;width:32px">';
