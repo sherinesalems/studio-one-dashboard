@@ -1213,7 +1213,7 @@ function rTasks(){
 function rMiniCalSmall(){
   var m=DB.calMonth,y=DB.calYear;
   var mNames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate();
+  var fd=(new Date(y,m,1).getDay()+6)%7,dm=new Date(y,m+1,0).getDate();
   var hasEvent={};
   DB.tasks.forEach(function(t){var d=new Date(t.due+'T12:00');if(d.getMonth()===m&&d.getFullYear()===y)hasEvent[d.getDate()]=(hasEvent[d.getDate()]||[]); hasEvent[d.getDate()].push({type:'task',done:t.st==='done'});});
   DB.meetings.forEach(function(mt){var d=new Date(mt.date+'T12:00');if(d.getMonth()===m&&d.getFullYear()===y){if(!hasEvent[d.getDate()])hasEvent[d.getDate()]=[];hasEvent[d.getDate()].push({type:'meet'});}});
@@ -1242,7 +1242,7 @@ function rMiniCalSmall(){
     +'<button onclick="DB.calMonth=DB.calMonth<11?DB.calMonth+1:0;if(DB.calMonth===0)DB.calYear++;render()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px">&rarr;</button>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">'
-    +['D','L','M','M','J','V','S'].map(function(d){return'<div style="text-align:center;font-size:8px;font-weight:700;color:var(--text3);padding:2px 0">'+d+'</div>';}).join('')
+    +['L','M','M','J','V','S','D'].map(function(d){return'<div style="text-align:center;font-size:8px;font-weight:700;color:var(--text3);padding:2px 0">'+d+'</div>';}).join('')
     +cells+'</div></div>';
 }
 
@@ -1864,7 +1864,7 @@ function rTimeline(){
 function rSchedule(){
   var m=DB.calMonth,y=DB.calYear;
   var mNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  var fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate();
+  var fd=(new Date(y,m,1).getDay()+6)%7,dm=new Date(y,m+1,0).getDate();
 
   // Build event maps
   var evByD={};
@@ -1958,7 +1958,7 @@ function rSchedule(){
       var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':isGym?'#bfdbfe':evBg;
       var evFg2=isHoliday?'#9ca3af':isBday?'#fff':isGym?'#1e40af':evFg;
       var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':isGym?'none':'none';
-      var shortTtl=ev.ttl.length>20?ev.ttl.substring(0,19)+'…':ev.ttl;
+      var shortTtl=ev.ttl.length>30?ev.ttl.substring(0,29)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='personal'?'editPersonalTask('+ev.id+')':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday||isGym?'500':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
     }
@@ -1973,7 +1973,7 @@ function rSchedule(){
   html+='<div style="flex:1;overflow-y:auto;padding:14px 16px">';
   html+='<div class="cal-big">';
   html+='<div class="cal-big-h"><button class="btn btn-light btn-xs" onclick="prevMonth()">&larr;</button><div class="cal-big-t">'+mNames[m]+' '+y+'</div><button class="btn btn-light btn-xs" onclick="nextMonth()">&rarr;</button><button class="btn btn-light btn-xs" onclick="DB.calMonth=new Date().getMonth();DB.calYear=new Date().getFullYear();render()">Hoy</button></div>';
-  html+='<div class="cal-big-g">'+['Dom','Lun','Mar','Mie','Jue','Vie','Sab'].map(function(d){return'<div class="cal-dow">'+d+'</div>';}).join('')+cells+'</div>';
+  html+='<div class="cal-big-g">'+['Lun','Mar','Mie','Jue','Vie','Sab','Dom'].map(function(d){return'<div class="cal-dow">'+d+'</div>';}).join('')+cells+'</div>';
   html+='</div>';
 
   // Legend
@@ -2417,7 +2417,7 @@ function rFinance(){
 function rSocial(){
   var m=DB.calMonth,y=DB.calYear;
   var mNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  var fd=new Date(y,m,1).getDay();
+  var fd=(new Date(y,m,1).getDay()+6)%7;
   var dm=new Date(y,m+1,0).getDate();
   var platforms=['instagram','facebook','linkedin','twitter'];
   var plNames={instagram:'Instagram',facebook:'Facebook',linkedin:'LinkedIn',twitter:'Twitter / X'};
@@ -2440,7 +2440,7 @@ function rSocial(){
   // Calendar grid
   html+='<div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden">';
   html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">';
-  var days=['Dom','Lun','Mar','Mie','Jue','Vie','Sab'];
+  var days=['Lun','Mar','Mie','Jue','Vie','Sab','Dom'];
   for(var d=0;d<7;d++)html+='<div style="text-align:center;font-size:10px;font-weight:700;color:var(--text3);padding:8px 0;'+(d===0||d===6?'background:var(--bg2)':'')+'">'+days[d]+'</div>';
   html+='</div>';
   html+='<div style="display:grid;grid-template-columns:repeat(7,1fr)">';
