@@ -380,7 +380,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],subscriptions:[],
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],subscriptions:[],agendaNotes:[],
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -2121,13 +2121,47 @@ function rSchedule(){
     }
     html+='</div>';
   }
-  html+='</div>';
 
+  // Scratchpad — undated quick notes
+  if(!DB.agendaNotes)DB.agendaNotes=[];
+  html+='<div style="border-top:1px solid var(--border);padding:12px 14px;flex-shrink:0">';
+  html+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 Apuntes rápidos</div>';
+  // Existing scratch notes
+  if(DB.agendaNotes.length){
+    html+='<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">';
+    DB.agendaNotes.forEach(function(n){
+      html+='<div style="display:flex;align-items:flex-start;gap:6px;padding:6px 8px;background:var(--bg2);border-radius:7px;border-left:3px solid var(--indigo-bd)">';
+      html+='<div style="flex:1;font-size:10.5px;color:var(--text);line-height:1.4;word-break:break-word">'+n.txt+'</div>';
+      html+='<button onclick="delAgendaNote('+n.id+')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0;line-height:1;flex-shrink:0">✕</button>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  // Input to add new
+  html+='<div style="display:flex;gap:6px;align-items:flex-start">';
+  html+='<textarea id="agenda-scratch" rows="2" placeholder="Ej. Ir al dentista, llamar al banco..." style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:var(--sans);font-size:11px;outline:none;color:var(--text);resize:none;line-height:1.4"></textarea>';
+  html+='<button onclick="addAgendaNote()" style="background:var(--indigo);color:#fff;border:none;border-radius:8px;padding:7px 10px;cursor:pointer;font-family:var(--sans);font-size:11px;font-weight:600;white-space:nowrap">+ Agregar</button>';
+  html+='</div>';
+  html+='</div>';
+  html+='</div>';
   html+='</div></div>';
   return html;
 }
 
 
+function addAgendaNote(){
+  var el=document.getElementById('agenda-scratch');
+  var txt=(el||{}).value||'';
+  if(!txt.trim())return;
+  if(!DB.agendaNotes)DB.agendaNotes=[];
+  DB.agendaNotes.unshift({id:Date.now(),txt:txt.trim()});
+  if(el)el.value='';
+  saveToStorage();render();
+}
+function delAgendaNote(id){
+  DB.agendaNotes=(DB.agendaNotes||[]).filter(function(n){return n.id!==id;});
+  saveToStorage();render();
+}
 function prevMonth(){DB.calMonth--;if(DB.calMonth<0){DB.calMonth=11;DB.calYear--;}render();}
 function nextMonth(){DB.calMonth++;if(DB.calMonth>11){DB.calMonth=0;DB.calYear++;}render();}
 function delMeet(id){DB.meetings=DB.meetings.filter(function(m){return m.id!==id;});buildNav();render();}
@@ -3370,7 +3404,7 @@ function saveToStorage(){
     var save={
       clients:DB.clients,potentials:DB.potentials,tasks:DB.tasks,
       meetings:DB.meetings,posts:DB.posts,monthly:DB.monthly,
-      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[],personalTasks:DB.personalTasks||[],subscriptions:DB.subscriptions||[]
+      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[],personalTasks:DB.personalTasks||[],subscriptions:DB.subscriptions||[],agendaNotes:DB.agendaNotes||[]
     };
     localStorage.setItem('studioOS_v1',JSON.stringify(save));
   }catch(e){console.warn('Save failed:',e);}
@@ -3440,6 +3474,7 @@ function loadFromStorage(){
     if(save.personalTasks)DB.personalTasks=save.personalTasks;
     if(save.subscriptions)DB.subscriptions=save.subscriptions;
     if(!DB.subscriptions||!DB.subscriptions.length)DB.subscriptions=getDefaultSubs();
+    if(save.agendaNotes)DB.agendaNotes=save.agendaNotes;
     var gUser=localStorage.getItem('studioGmailUser');
     var gPw=localStorage.getItem('studioGmailPw');
     var ejsSvc=localStorage.getItem('studioEjsService');
