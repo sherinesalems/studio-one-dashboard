@@ -380,7 +380,7 @@ var PKGS=[
 
 var DB={
   view:'dashboard',selClient:null,clientFilter:'all',calMonth:new Date().getMonth(),calYear:new Date().getFullYear(),projectPkgFilter:'all',pkgTab:'packages',
-  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],subscriptions:[],agendaNotes:[],
+  tlExpand:{},bufferConnected:false,bufferAccounts:[],gmailUser:'',gmailAppPw:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',makeWebhookUrl:'',showEmailConfig:false,selDate:null,penRate:3.41,notes:[],birthdays:[],personalTasks:[],subscriptions:[],agendaNotes:[],ocTaken:{},
   studio:{name:'Studio One',desc:'Estudio de branding y diseno visual',tasks:[]},
   clients:[],
   potentials:[],
@@ -1998,7 +1998,9 @@ function rSchedule(){
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='personal'?'editPersonalTask('+ev.id+')':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday||isGym?'500':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
     }
-    cells+='<div class="cal-add" onclick="event.stopPropagation();openAgendaModal(\''+dateStr+'\')">+</div>';
+    var ocTaken=DB.ocTaken&&DB.ocTaken[dateStr];
+    cells+='<button onclick="event.stopPropagation();toggleOC(\''+dateStr+'\',event)" title="Anticonceptivo oral" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:4px;border:none;cursor:pointer;font-size:7px;font-weight:700;line-height:1;background:'+(ocTaken?'#9b4d7e':'#f3d0e7')+';color:'+(ocTaken?'#fff':'#c4789b')+';padding:0;display:flex;align-items:center;justify-content:center;z-index:2;letter-spacing:0">OC</button>';
+    cells+='<div class="cal-add" onclick="event.stopPropagation();openAgendaModal(\''+dateStr+'\')" style="bottom:3px">+</div>';
     cells+='</div>';
   }
 
@@ -2165,6 +2167,13 @@ function addAgendaNote(){
 }
 function delAgendaNote(id){
   DB.agendaNotes=(DB.agendaNotes||[]).filter(function(n){return n.id!==id;});
+  saveToStorage();render();
+}
+function toggleOC(dateStr,e){
+  if(e)e.stopPropagation();
+  if(!DB.ocTaken)DB.ocTaken={};
+  if(DB.ocTaken[dateStr])delete DB.ocTaken[dateStr];
+  else DB.ocTaken[dateStr]=true;
   saveToStorage();render();
 }
 function prevMonth(){DB.calMonth--;if(DB.calMonth<0){DB.calMonth=11;DB.calYear--;}render();}
@@ -3409,7 +3418,7 @@ function saveToStorage(){
     var save={
       clients:DB.clients,potentials:DB.potentials,tasks:DB.tasks,
       meetings:DB.meetings,posts:DB.posts,monthly:DB.monthly,
-      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[],personalTasks:DB.personalTasks||[],subscriptions:DB.subscriptions||[],agendaNotes:DB.agendaNotes||[]
+      studio:DB.studio,tlExpand:DB.tlExpand||{},notes:DB.notes||[],birthdays:DB.birthdays||[],personalTasks:DB.personalTasks||[],subscriptions:DB.subscriptions||[],agendaNotes:DB.agendaNotes||[],ocTaken:DB.ocTaken||{}
     };
     localStorage.setItem('studioOS_v1',JSON.stringify(save));
   }catch(e){console.warn('Save failed:',e);}
@@ -3480,6 +3489,7 @@ function loadFromStorage(){
     if(save.subscriptions)DB.subscriptions=save.subscriptions;
     if(!DB.subscriptions||!DB.subscriptions.length)DB.subscriptions=getDefaultSubs();
     if(save.agendaNotes)DB.agendaNotes=save.agendaNotes;
+    if(save.ocTaken)DB.ocTaken=save.ocTaken;
     var gUser=localStorage.getItem('studioGmailUser');
     var gPw=localStorage.getItem('studioGmailPw');
     var ejsSvc=localStorage.getItem('studioEjsService');
