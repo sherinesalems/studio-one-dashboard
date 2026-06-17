@@ -1881,9 +1881,32 @@ function rSchedule(){
   DB.tasks.forEach(function(t){
     addEv(t.due,{type:'task',id:t.id,ttl:t.ttl,time:'',cl:t.cl,done:t.st==='done',pr:t.pr});
   });
-  // Notes
+  // Notes — including recurring
   (DB.notes||[]).forEach(function(n){
-    addEv(n.date,{type:'note',id:n.id,ttl:n.ttl,time:n.time||'',cl:'',done:false});
+    if(!n.repeat||n.repeat==='none'){
+      // Single note — only show in current month view
+      addEv(n.date,{type:'note',id:n.id,ttl:n.ttl,time:n.time||'',cl:'',done:false,recurring:false});
+    } else if(n.repeat==='monthly'){
+      // Repeat same day every month
+      var origDay=new Date(n.date+'T12:00').getDate();
+      var daysInMonth=new Date(y,m+1,0).getDate();
+      if(origDay<=daysInMonth){
+        var rStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(origDay<10?'0':'')+origDay;
+        addEv(rStr,{type:'note',id:n.id,ttl:'🔁 '+n.ttl,time:n.time||'',cl:'',done:false,recurring:true});
+      }
+    } else if(n.repeat==='weekly'&&n.repeatDays&&n.repeatDays.length){
+      // Repeat on specific weekdays — show all occurrences this month
+      for(var rd=1;rd<=dm;rd++){
+        var rdDate=new Date(y,m,rd);
+        // JS getDay: 0=Sun,1=Mon...6=Sat; our days: 0=Mon,1=Tue...6=Sun
+        var jsDay=rdDate.getDay();
+        var ourDay=jsDay===0?6:jsDay-1;
+        if(n.repeatDays.indexOf(ourDay)>=0){
+          var rdStr=y+'-'+((m+1)<10?'0':'')+(m+1)+'-'+(rd<10?'0':'')+rd;
+          addEv(rdStr,{type:'note',id:n.id,ttl:'🔁 '+n.ttl,time:n.time||'',cl:'',done:false,recurring:true});
+        }
+      }
+    }
   });
   // Personal tasks
   (DB.personalTasks||[]).forEach(function(t){
@@ -3655,39 +3678,91 @@ function openTaskModalDate(dateStr){
 function openNoteModal(dateStr){
   showModal(
     '<h3>Nueva nota</h3>'+
-    fg('Titulo / Contenido','n-ttl','Ej. Llamar a cliente, idea de post...','')+
-    fg('Fecha','n-dt','','date')+
+    fg('Titulo / Contenido','n-ttl','Ej. Pagar tarjeta, Pilates...','')+
+    '<div class="fg"><label class="fl">Fecha</label><input class="fi" id="n-dt" type="date"/></div>'+
     fg('Hora (opcional)','n-tm','','time')+
+    '<div class="fg"><label class="fl">Repetir</label><select class="fs" id="n-rep" onchange="toggleNoteRepeat()">'+
+    '<option value="none">Sin repetición</option>'+
+    '<option value="weekly">Cada semana (días específicos)</option>'+
+    '<option value="monthly">Cada mes (mismo día del mes)</option>'+
+    '</select></div>'+
+    '<div id="n-rep-weekly" style="display:none"><label class="fl" style="margin-bottom:6px">Días de la semana</label>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+    ['Lun','Mar','Mie','Jue','Vie','Sab','Dom'].map(function(d,i){return '<label style="display:flex;align-items:center;gap:3px;font-size:10px;cursor:pointer"><input type="checkbox" id="n-day-'+i+'" value="'+i+'"/> '+d+'</label>';}).join('')+
+    '</div></div>'+
+    '<div id="n-rep-monthly" style="display:none"><div style="font-size:10px;color:var(--text3);padding:4px 0">Se repetirá el mismo día del mes (ej. cada 22 de cada mes)</div></div>'+
     '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-dark btn-sm" onclick="saveNote()">Guardar nota</button></div>'
   );
-  setTimeout(function(){var el=document.getElementById('n-dt');if(el&&dateStr){el.type='date';el.value=dateStr;}},50);
+  setTimeout(function(){
+    var el=document.getElementById('n-dt');
+    if(el&&dateStr){el.type='date';el.value=dateStr;}
+  },50);
+}
+function toggleNoteRepeat(){
+  var rep=(document.getElementById('n-rep')||{}).value||'none';
+  var weekly=document.getElementById('n-rep-weekly');
+  var monthly=document.getElementById('n-rep-monthly');
+  if(weekly)weekly.style.display=rep==='weekly'?'block':'none';
+  if(monthly)monthly.style.display=rep==='monthly'?'block':'none';
 }
 function saveNote(){
   var ttl=(document.getElementById('n-ttl')||{}).value||'';
   var dt=(document.getElementById('n-dt')||{}).value||TODAY;
   var tm=(document.getElementById('n-tm')||{}).value||'';
+  var rep=(document.getElementById('n-rep')||{}).value||'none';
   if(!ttl){alert('Agrega un titulo.');return;}
   if(!DB.notes)DB.notes=[];
-  DB.notes.push({id:Date.now(),ttl:ttl,date:dt,time:tm});
+  var note={id:Date.now(),ttl:ttl,date:dt,time:tm,repeat:rep};
+  if(rep==='weekly'){
+    var days=[];
+    for(var i=0;i<7;i++){var cb=document.getElementById('n-day-'+i);if(cb&&cb.checked)days.push(i);}
+    note.repeatDays=days;
+  }
+  DB.notes.push(note);
   closeM();saveToStorage();render();
 }
 function editNote(id){
   var n=(DB.notes||[]).find(function(x){return x.id===id;});
   if(!n)return;
+  var dayChecks=['Lun','Mar','Mie','Jue','Vie','Sab','Dom'].map(function(d,i){
+    var chk=(n.repeatDays||[]).indexOf(i)>=0?' checked':'';
+    return '<label style="display:flex;align-items:center;gap:3px;font-size:10px;cursor:pointer"><input type="checkbox" id="en-day-'+i+'"'+chk+' value="'+i+'"/> '+d+'</label>';
+  }).join('');
+  var rep=n.repeat||'none';
   showModal(
     '<h3>Editar nota</h3>'+
     '<div class="fg"><label class="fl">Titulo</label><input class="fi" id="en-ttl" value="'+n.ttl.replace(/"/g,'&quot;')+'"/></div>'+
     '<div class="fg"><label class="fl">Fecha</label><input class="fi" id="en-dt" type="date" value="'+n.date+'"/></div>'+
     '<div class="fg"><label class="fl">Hora</label><input class="fi" id="en-tm" type="time" value="'+(n.time||'')+'"/></div>'+
-    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-rose btn-sm" onclick="delNote('+id+')">Eliminar</button><button class="btn btn-dark btn-sm" onclick="saveNoteEdit('+id+')">Guardar</button></div>'
+    '<div class="fg"><label class="fl">Repetir</label><select class="fs" id="en-rep" onchange="toggleNoteRepeatEdit()">'+
+    '<option value="none"'+(rep==='none'?' selected':'')+'>Sin repetición</option>'+
+    '<option value="weekly"'+(rep==='weekly'?' selected':'')+'>Cada semana</option>'+
+    '<option value="monthly"'+(rep==='monthly'?' selected':'')+'>Cada mes</option>'+
+    '</select></div>'+
+    '<div id="en-rep-weekly" style="display:'+(rep==='weekly'?'block':'none')+'"><label class="fl" style="margin-bottom:6px">Días</label><div style="display:flex;gap:6px;flex-wrap:wrap">'+dayChecks+'</div></div>'+
+    '<div id="en-rep-monthly" style="display:'+(rep==='monthly'?'block':'none')+'"><div style="font-size:10px;color:var(--text3);padding:4px 0">Se repite el día '+new Date(n.date+'T12:00').getDate()+' de cada mes</div></div>'+
+    '<div class="mact"><button class="btn btn-light btn-sm" onclick="closeM()">Cancelar</button><button class="btn btn-rose btn-xs" onclick="delNote('+id+')">Eliminar</button><button class="btn btn-dark btn-sm" onclick="saveNoteEdit('+id+')">Guardar</button></div>'
   );
+}
+function toggleNoteRepeatEdit(){
+  var rep=(document.getElementById('en-rep')||{}).value||'none';
+  var weekly=document.getElementById('en-rep-weekly');
+  var monthly=document.getElementById('en-rep-monthly');
+  if(weekly)weekly.style.display=rep==='weekly'?'block':'none';
+  if(monthly)monthly.style.display=rep==='monthly'?'block':'none';
 }
 function saveNoteEdit(id){
   var n=(DB.notes||[]).find(function(x){return x.id===id;});
   if(!n)return;
   n.ttl=document.getElementById('en-ttl').value||n.ttl;
   n.date=document.getElementById('en-dt').value||n.date;
-  n.time=document.getElementById('en-tm').value||n.time;
+  n.time=document.getElementById('en-tm').value||'';
+  n.repeat=(document.getElementById('en-rep')||{}).value||'none';
+  if(n.repeat==='weekly'){
+    var days=[];
+    for(var i=0;i<7;i++){var cb=document.getElementById('en-day-'+i);if(cb&&cb.checked)days.push(i);}
+    n.repeatDays=days;
+  } else {n.repeatDays=[];}
   closeM();saveToStorage();render();
 }
 function delNote(id){
