@@ -709,7 +709,6 @@ function render(){
 
 // ── DASHBOARD ──
 function rDash(){
-  if(DB.finTab==='subs'){var subHtml=rSubs();html+='<div class="content">'+subHtml+'</div>';return html;}
   var tB=DB.clients.reduce(function(a,c){return a+c.budget;},0);
   var tP=DB.clients.reduce(function(a,c){return a+c.paid;},0);
   var tPend=DB.clients.reduce(function(a,c){return a+c.pending;},0);
@@ -1927,14 +1926,14 @@ function rSchedule(){
     for(var j=0;j<evs.length;j++){
       var ev=evs[j];
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='task'?'#f8fafc':cl?cc(cl,1):'var(--indigo-bg)';
+      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='task'?'#eaecef':cl?cc(cl,1):'var(--indigo-bg)';
       var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?'#312e81':'#312e81'):ev.type==='note'?'#3d3d1a':ev.type==='personal'?'#5b21b6':ev.type==='task'?'#334155':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
       var isGym=ev.type==='gym';
       var evBg2=isHoliday?'transparent':isBday?'#4a6cf7':isGym?'#bfdbfe':evBg;
       var evFg2=isHoliday?'#9ca3af':isBday?'#fff':isGym?'#1e40af':evFg;
       var evBorder=isHoliday?'none':isBday?'1px solid #4a6cf7':isGym?'none':'none';
-      var shortTtl=ev.ttl.length>14?ev.ttl.substring(0,13)+'…':ev.ttl;
+      var shortTtl=ev.ttl.length>20?ev.ttl.substring(0,19)+'…':ev.ttl;
       var clickAct=ev.type==='meet'?'editMeet('+ev.id+')':ev.type==='note'?'editNote('+ev.id+')':ev.type==='birthday'?'editBirthday('+ev.id+')':ev.type==='personal'?'editPersonalTask('+ev.id+')':ev.type==='holiday'?'':'editTask('+ev.id+')';
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday||isGym?'500':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
     }
@@ -2287,6 +2286,19 @@ function delSub(id){
 }
 
 function rFinance(){
+  if(!DB.finTab)DB.finTab='overview';
+  // If subs tab selected, show subscriptions
+  if(DB.finTab==='subs'){
+    var html='';
+    // Topbar with tab buttons
+    html+='<div class="topbar" style="background:linear-gradient(135deg,#1a1d2e,#2d2f45)"><div><div class="tb-t" style="color:#fff">Finanzas</div><div class="tb-s" style="color:rgba(255,255,255,.5)">Control financiero del estudio</div></div>';
+    html+='<div style="display:flex;gap:6px">';
+    html+='<button class="btn btn-sm" onclick="DB.finTab=\'overview\';render()" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-size:10px">Resumen</button>';
+    html+='<button class="btn btn-sm" onclick="DB.finTab=\'subs\';render()" style="background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.3);color:#fff;font-size:10px;font-weight:600">Suscripciones</button>';
+    html+='</div></div>';
+    html+='<div class="content">'+rSubs()+'</div>';
+    return html;
+  }
   var tB=DB.clients.reduce(function(a,c){return a+c.budget;},0);
   var tP=DB.clients.reduce(function(a,c){return a+c.paid;},0);
   var tPend=DB.clients.reduce(function(a,c){return a+c.pending;},0);
@@ -2311,7 +2323,11 @@ function rFinance(){
       if(activeM){if(!pactedByMonth[mNames[mi]])pactedByMonth[mNames[mi]]=0;pactedByMonth[mNames[mi]]+=monthlyAmt;}
     }
   }
-  var html='<div class="topbar"><div class="tb-t">Finanzas</div></div>';
+  var html='<div class="topbar" style="background:linear-gradient(135deg,#1a1d2e,#2d2f45)"><div><div class="tb-t" style="color:#fff">Finanzas</div><div class="tb-s" style="color:rgba(255,255,255,.5)">Control financiero del estudio</div></div>';
+  html+='<div style="display:flex;gap:6px">';
+  html+='<button class="btn btn-sm" onclick="DB.finTab=\'overview\';render()" style="background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.3);color:#fff;font-size:10px;font-weight:600">Resumen</button>';
+  html+='<button class="btn btn-sm" onclick="DB.finTab=\'subs\';render()" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-size:10px">Suscripciones</button>';
+  html+='</div></div>';
   html+='<div class="content">';
   // ── Income of the month hero ──
   var mNames2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
