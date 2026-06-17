@@ -613,6 +613,7 @@ var NAVITEMS=[
   {v:'timeline',lbl:'Timeline',ic:'<path d="M3 6h18M3 10h14M3 14h10M3 18h6"/>',g:'Studio'},
   {v:'schedule',lbl:'Agenda',ic:'<rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 1v4M11 1v4M2 7h12"/>',g:'Gestion',badge:function(){return DB.meetings.length;}},
   {v:'finance',lbl:'Finanzas',ic:'<path d="M8 1v14M5 4h4.5a2.5 2.5 0 010 5H5m0 0h5a2.5 2.5 0 010 5H5"/>',g:'Gestion'},
+  {v:'subs',lbl:'Suscripciones',ic:'<rect x="2" y="5" width="12" height="10" rx="1.5"/><path d="M5 8h6M5 11h4"/>',g:'Gestion'},
   {v:'social',lbl:'Social Media',ic:'<circle cx="12" cy="3" r="2"/><circle cx="4" cy="8" r="2"/><circle cx="12" cy="13" r="2"/><path d="M5.8 9l4.4 3M10.2 4L5.8 7"/>',g:'Gestion'},
   {v:'reports',lbl:'Reportes',ic:'<path d="M2 12l3-4 3 2 3-6 3 4"/>',g:'Gestion'},
   {v:'buffer',lbl:'Buffer / Redes',ic:'<circle cx="8" cy="12" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="12" r="2"/><line x1="9.4" y1="11" x2="10.6" y2="9"/><line x1="13.4" y1="9" x2="14.6" y2="11"/>',g:'Gestion'},
@@ -701,6 +702,7 @@ function render(){
   else if(DB.view==='timeline')m.innerHTML=rTimeline();
   else if(DB.view==='schedule')m.innerHTML=rSchedule();
   else if(DB.view==='finance')m.innerHTML=rFinance();
+  else if(DB.view==='subs')m.innerHTML=rSubsPage();
   else if(DB.view==='social')m.innerHTML=rSocial();
   else if(DB.view==='reports')m.innerHTML=rReports();
   else if(DB.view==='buffer')m.innerHTML=rBuffer();
@@ -2156,6 +2158,11 @@ function getDefaultSubs(){
   ];
 }
 
+function rSubsPage(){
+  var html='<div class="topbar" style="background:linear-gradient(135deg,#1a1d2e,#2d2f45)"><div><div class="tb-t" style="color:#fff">Suscripciones</div><div class="tb-s" style="color:rgba(255,255,255,.5)">Herramientas y servicios activos</div></div></div>';
+  html+='<div class="content">'+rSubs()+'</div>';
+  return html;
+}
 function rSubs(){
   if(!DB.subscriptions||!DB.subscriptions.length)DB.subscriptions=getDefaultSubs();
   var active=DB.subscriptions.filter(function(s){return s.active;});
@@ -2292,10 +2299,7 @@ function rFinance(){
     var html='';
     // Topbar with tab buttons
     html+='<div class="topbar" style="background:linear-gradient(135deg,#1a1d2e,#2d2f45)"><div><div class="tb-t" style="color:#fff">Finanzas</div><div class="tb-s" style="color:rgba(255,255,255,.5)">Control financiero del estudio</div></div>';
-    html+='<div style="display:flex;gap:6px">';
-    html+='<button class="btn btn-sm" onclick="DB.finTab=\'overview\';render()" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-size:10px">Resumen</button>';
-    html+='<button class="btn btn-sm" onclick="DB.finTab=\'subs\';render()" style="background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.3);color:#fff;font-size:10px;font-weight:600">Suscripciones</button>';
-    html+='</div></div>';
+    html+='</div>';
     html+='<div class="content">'+rSubs()+'</div>';
     return html;
   }
@@ -2324,10 +2328,7 @@ function rFinance(){
     }
   }
   var html='<div class="topbar" style="background:linear-gradient(135deg,#1a1d2e,#2d2f45)"><div><div class="tb-t" style="color:#fff">Finanzas</div><div class="tb-s" style="color:rgba(255,255,255,.5)">Control financiero del estudio</div></div>';
-  html+='<div style="display:flex;gap:6px">';
-  html+='<button class="btn btn-sm" onclick="DB.finTab=\'overview\';render()" style="background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.3);color:#fff;font-size:10px;font-weight:600">Resumen</button>';
-  html+='<button class="btn btn-sm" onclick="DB.finTab=\'subs\';render()" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-size:10px">Suscripciones</button>';
-  html+='</div></div>';
+  html+='</div>';
   html+='<div class="content">';
   // ── Income of the month hero ──
   var mNames2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -2373,7 +2374,7 @@ function rFinance(){
     html+='<div style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--orange)">$'+m.exp.toLocaleString()+'</div>';
     html+='<div style="text-align:right;font-family:var(--mono);font-size:10.5px;font-weight:600;color:'+(net>0?'var(--lime)':'var(--rose)')+';display:flex;flex-direction:column;align-items:flex-end"><span>$'+net.toLocaleString()+'</span>'+(net?'<span style="font-size:8.5px;color:var(--text3)">S/'+pen(net)+'</span>':'')+'</div></div>';
   }
-  html+='<div style="display:grid;grid-template-columns:52px 80px 1fr 60px 60px 60px;gap:6px;padding-top:7px;border-top:1px solid var(--border2);font-size:11.5px;font-weight:600"><span style="color:var(--text3)">TOTAL</span><span></span><span></span><span style="text-align:right;font-family:var(--mono);color:var(--sky)">$'+tRev.toLocaleString()+'</span><span style="text-align:right;font-family:var(--mono);color:var(--orange)">$'+tExp.toLocaleString()+'</span><span style="text-align:right;font-family:var(--mono);color:'+(tNet>0?'var(--lime)':'var(--rose)')+'">$'+tNet.toLocaleString()+'</span></div>';
+  html+='<div style="display:grid;grid-template-columns:52px 80px 1fr 60px 60px 60px;gap:6px;padding-top:7px;border-top:1px solid var(--border2);font-size:11.5px;font-weight:600"><span style="color:var(--text3)">TOTAL</span><span></span><span></span><span style="text-align:right;font-family:var(--mono);color:var(--sky)">$'+tRev.toLocaleString()+'</span><span style="text-align:right;font-family:var(--mono);color:var(--orange)">$'+tExp.toLocaleString()+'</span><span style="text-align:right;font-family:var(--mono);color:'+(tNet>=0?'var(--lime)':'var(--rose)')+'">$'+tNet.toLocaleString()+'</span></div>';
   html+='</div>';
   html+='<div class="card" style="margin-bottom:14px"><div class="shdr">Plan de ahorro &mdash; Junio &middot; Neto $'+mNet.toLocaleString()+'</div>';
   html+='<div style="height:9px;border-radius:9px;background:var(--bg3);overflow:hidden;display:flex;margin:6px 0"><div style="width:70%;height:100%;background:#3d5af1"></div><div style="width:20%;height:100%;background:#0ea5e9"></div><div style="width:10%;height:100%;background:#d1d5db"></div></div>';
