@@ -1987,7 +1987,7 @@ function rSchedule(){
     for(var j=0;j<evs.length;j++){
       var ev=evs[j];
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='studio'?'#1f2937':ev.type==='task'?'#eaecef':cl?cc(cl,1):'var(--indigo-bg)';
+      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='studio'?'#4d3e8c':ev.type==='task'?'#eaecef':cl?cc(cl,1):'var(--indigo-bg)';
       var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?'#312e81':'#312e81'):ev.type==='note'?'#3d3d1a':ev.type==='personal'?'#5b21b6':ev.type==='studio'?'#fff':ev.type==='task'?'#334155':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
       var isGym=ev.type==='gym';
@@ -1999,7 +1999,7 @@ function rSchedule(){
       cells+='<div class="cal-ev" '+(clickAct?'onclick="event.stopPropagation();'+clickAct+'"':'')+' style="background:'+evBg2+';color:'+evFg2+';border:'+evBorder+';opacity:'+(ev.done?.5:1)+';text-decoration:'+(ev.done?'line-through':'none')+';cursor:'+(clickAct?'pointer':'default')+';font-weight:'+(isBday||isGym?'500':'400')+'" title="'+ev.ttl+(ev.time?' · '+ev.time:'')+'">'+shortTtl+'</div>';
     }
     var ocTaken=DB.ocTaken&&DB.ocTaken[dateStr];
-    cells+='<button onclick="event.stopPropagation();toggleOC(\''+dateStr+'\',event)" title="Anticonceptivo oral" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:4px;border:none;cursor:pointer;font-size:7px;font-weight:700;line-height:1;background:'+(ocTaken?'#9b4d7e':'#f3d0e7')+';color:'+(ocTaken?'#fff':'#c4789b')+';padding:0;display:flex;align-items:center;justify-content:center;z-index:2;letter-spacing:0">OC</button>';
+    cells+='<button onclick="event.stopPropagation();toggleOC(\''+dateStr+'\',event)" title="Anticonceptivo oral" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:4px;border:none;cursor:pointer;font-size:7px;font-weight:700;line-height:1;background:'+(ocTaken?'#aa72c1':'#f3d0e7')+';color:'+(ocTaken?'#fff':'#8b5a9e')+';padding:0;display:flex;align-items:center;justify-content:center;z-index:2;letter-spacing:0">OC</button>';
     cells+='<div class="cal-add" onclick="event.stopPropagation();openAgendaModal(\''+dateStr+'\')" style="bottom:3px">+</div>';
     cells+='</div>';
   }
@@ -2019,7 +2019,7 @@ function rSchedule(){
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#a5b4fc"></div>Reunión</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#eaecef;border:1px solid #cbd5e1"></div>Tarea</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#ede9fe"></div>Personal</div>';
-  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#1f2937"></div>Estudio</div>';
+  html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#4d3e8c"></div>Estudio</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#bfdbfe"></div>Gym</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#ededa9"></div>Nota</div>';
   html+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)"><div style="width:9px;height:9px;border-radius:2px;background:#4a6cf7"></div>Cumpleaños</div>';
