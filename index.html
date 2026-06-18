@@ -1991,7 +1991,7 @@ function rSchedule(){
     for(var j=0;j<evs.length;j++){
       var ev=evs[j];
       var cl=DB.clients.find(function(c){return c.co===ev.cl;});
-      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='studio'?'#4d3e8c':ev.type==='task'?'#eaecef':cl?cc(cl,1):'var(--indigo-bg)';
+      var evBg=ev.done?'#dcfce7':ev.type==='meet'?(cl?'#a5b4fc':'#a5b4fc'):ev.type==='note'?'#ededa9':ev.type==='personal'?'#ede9fe':ev.type==='studio'?'#6963db':ev.type==='task'?'#eaecef':cl?cc(cl,1):'var(--indigo-bg)';
       var evFg=ev.done?'#16a34a':ev.type==='meet'?(cl?'#312e81':'#312e81'):ev.type==='note'?'#3d3d1a':ev.type==='personal'?'#5b21b6':ev.type==='studio'?'#fff':ev.type==='task'?'#334155':cl?cc(cl,0):'var(--indigo)';
       var isHoliday=ev.type==='holiday';var isBday=ev.type==='birthday';
       var isGym=ev.type==='gym';var isWorkout=ev.type==='workout';
