@@ -4113,5 +4113,18 @@ function hideSidebarOnMobile(){
 window.addEventListener('resize',hideSidebarOnMobile);
 setTimeout(hideSidebarOnMobile,300);
 setTimeout(hideSidebarOnMobile,1000);
+</script><script>
+function fixMobile(){
+  if(window.innerWidth<=1024){
+    var s=document.querySelector('.sidebar');
+    if(s){s.style.setProperty('display','none','important');}
+    var m=document.getElementById('main');
+    if(m){m.style.width='100%';m.style.maxWidth='100%';}
+  }
+}
+setTimeout(fixMobile,100);
+setTimeout(fixMobile,500);
+setTimeout(fixMobile,1500);
+window.addEventListener('resize',fixMobile);
 </script></body>
 </html>
