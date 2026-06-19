@@ -172,7 +172,7 @@ body{font-family:var(--sans);background:var(--bg);color:#ffffff;font-size:13px;l
       <input class="lpw" type="password" id="pw" oninput="this.style.color=this.value?'#1a1a1a':'#ccc';this.style.webkitTextFillColor=this.value?'#1a1a1a':'#ccc';" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;" onkeydown="if(event.key==='Enter')doLogin()"/>
       <button class="lbtn" onclick="doLogin()">Ingresar al sistema</button>
       <div class="lerr" id="pw-err"></div>
-      <div style="margin-top:8px;font-size:10px;color:var(--text3);text-align:center">Contrasena: <span style="font-family:var(--mono);letter-spacing:2px">101010</span></div>
+      <div style="margin-top:8px;font-size:10px;color:var(--text3);text-align:center">Contrasena: </div>
       <div style="margin-top:8px;text-align:center"><button onclick="quickLogin()" style="background:none;border:none;font-family:var(--sans);font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;text-underline-offset:2px">Entrar directo (demo)</button></div>
       <div style="margin-top:6px;text-align:center"><button onclick="showForgot()" style="background:none;border:none;font-family:var(--sans);font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline;text-underline-offset:2px">¿Olvidaste tu contrasena?</button></div>
     </div>
@@ -642,85 +642,7 @@ function buildNav(){
   html+='<button onclick="importBackup()" style="flex:1;background:var(--bg2);border:1px solid var(--border);color:var(--text2);font-family:var(--sans);font-size:8.5px;font-weight:600;padding:4px 6px;border-radius:5px;cursor:pointer">⬆ Restaurar</button>';
   html+='</div>';
   html+='<button onclick="clearStorage()" style="background:none;border:none;font-family:var(--sans);font-size:9px;color:var(--text3);cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0">Restablecer datos de ejemplo</button>';
-  html+='</div>';
-  document.getElementById('nav-w').innerHTML=html;
-}
-
-function doLogin(){
-  var val=document.getElementById('pw').value;
-  if(val==='101010'){
-    document.getElementById('login').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    var loaded=loadFromStorage();
-    buildNav();render();
-    if(loaded){
-      var ind=document.getElementById('save-ind');
-      if(ind){ind.textContent='✓ Datos restaurados';ind.style.color='var(--lime)';setTimeout(function(){ind.textContent='Auto-guardado activo';ind.style.color='var(--text3)';},2500);}
-    }
-  } else {
-    var err=document.getElementById('pw-err');
-    if(err)err.textContent='Contrasena incorrecta. Intenta de nuevo.';
-    document.getElementById('pw').value='';
-    document.getElementById('pw').focus();
-  }
-}
-function quickLogin(){
-  document.getElementById('login').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  var loaded=loadFromStorage();
-  buildNav();render();
-}
-function showForgot(){
-  document.getElementById('login-form').style.display='none';
-  document.getElementById('forgot-form').style.display='block';
-  document.getElementById('forgot-ok').style.display='none';
-  document.getElementById('forgot-err').textContent='';
-}
-function hideForgot(){
-  document.getElementById('login-form').style.display='block';
-  document.getElementById('forgot-form').style.display='none';
-  document.getElementById('forgot-ok').style.display='none';
-}
-function sendForgot(){
-  var em=document.getElementById('forgot-email').value.trim();
-  if(!em||em.indexOf('@')<0){document.getElementById('forgot-err').textContent='Ingresa un correo valido.';return;}
-  document.getElementById('forgot-form').style.display='none';
-  document.getElementById('forgot-ok').style.display='block';
-}
-
-function nav(v){DB.view=v;DB.selClient=null;if(v==='packages')DB.pkgTab='packages';buildNav();render();}
-
-function render(){
-  var m=document.getElementById('main');
-  if(DB.view==='dashboard')m.innerHTML=rDash();
-  else if(DB.view==='studio')m.innerHTML=rStudio();
-  else if(DB.view==='clients')m.innerHTML=rClients();
-  else if(DB.view==='potential')m.innerHTML=rPotential();
-  else if(DB.view==='tasks')m.innerHTML=rTasks();
-  else if(DB.view==='projects')m.innerHTML=rProjects();
-  else if(DB.view==='packages')m.innerHTML=rPackages();
-  else if(DB.view==='timeline')m.innerHTML=rTimeline();
-  else if(DB.view==='schedule')m.innerHTML=rSchedule();
-  else if(DB.view==='finance')m.innerHTML=rFinance();
-  else if(DB.view==='subs')m.innerHTML=rSubsPage();
-  else if(DB.view==='social')m.innerHTML=rSocial();
-  else if(DB.view==='reports')m.innerHTML=rReports();
-  else if(DB.view==='buffer')m.innerHTML=rBuffer();
-  else if(DB.view==='gmail')m.innerHTML=rGmailSettings();
-}
-
-// ── DASHBOARD ──
-function rDash(){
-  var tB=DB.clients.reduce(function(a,c){return a+c.budget;},0);
-  var tP=DB.clients.reduce(function(a,c){return a+c.paid;},0);
-  var tPend=DB.clients.reduce(function(a,c){return a+c.pending;},0);
-  var urg=DB.tasks.filter(function(t){return isUrgent(t);}).length;
-  var curMonthIdx=new Date(TODAY).getMonth();
-  var curMonthNames=['Ene 26','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var thisM=DB.monthly.find(function(m){return m.m===curMonthNames[curMonthIdx];})||DB.monthly[DB.monthly.length-1]||{rev:0,exp:0};
-  var ms=[
-    {l:'Cobrado total',v:'$'+tP.toLocaleString(),s:'de $'+tB.toLocaleString(),bg:'#f2f3f5',bc:'#ced2dc',tc:'#4a6cf7',k:'dollar'},
-    {l:'Por cobrar',v:'$'+tPend.toLocaleString(),s:DB.clients.filter(function(c){return c.pending>0;}).length+' clientes',bg:'#f3f4f6',bc:'#d1d5db',tc:'#5a5f72',k:'pay_pending'},
+  html+='0;}).length+' clientes',bg:'#f3f4f6',bc:'#d1d5db',tc:'#5a5f72',k:'pay_pending'},
     {l:'Este mes',v:'$'+thisM.rev.toLocaleString(),s:'ingresos junio',bg:'#eef0fd',bc:'#bfc9fc',tc:'#4a6cf7',k:'pay_ok'},
     {l:'Alertas',v:urg,s:'tareas urgentes',bg:'#fff1f2',bc:'#fecdd3',tc:'#e11d48',k:'schedule'}
   ];
