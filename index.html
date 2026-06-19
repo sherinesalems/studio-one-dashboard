@@ -759,7 +759,7 @@ function render(){
   else if(DB.view==='projects')m.innerHTML=rProjects();
   else if(DB.view==='packages')m.innerHTML=rPackages();
   else if(DB.view==='timeline')m.innerHTML=rTimeline();
-  else if(DB.view==='schedule')m.innerHTML=isMobile()?rScheduleMobile():rSchedule();
+  else if(DB.view==='schedule'){try{m.innerHTML=isMobile()?rScheduleMobile():rSchedule();}catch(e){m.innerHTML=rSchedule();}}
   else if(DB.view==='finance')m.innerHTML=rFinance();
   else if(DB.view==='subs')m.innerHTML=rSubsPage();
   else if(DB.view==='social')m.innerHTML=rSocial();
