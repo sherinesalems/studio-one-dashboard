@@ -4102,5 +4102,16 @@ function savePost(){DB.posts.unshift({id:Date.now(),cl:document.getElementById('
     FINANZAS
   </button>
 </div>
-</body>
+<script>
+function hideSidebarOnMobile(){
+  var nav=document.getElementById('nav-w');
+  var el=nav;
+  while(el&&el.parentElement&&el.parentElement.id!=='app'){el=el.parentElement;}
+  if(el&&window.innerWidth<=1024){el.style.display='none';}
+  else if(el){el.style.display='';}
+}
+window.addEventListener('resize',hideSidebarOnMobile);
+setTimeout(hideSidebarOnMobile,300);
+setTimeout(hideSidebarOnMobile,1000);
+</script></body>
 </html>
